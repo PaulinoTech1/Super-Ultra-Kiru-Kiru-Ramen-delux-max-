@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
@@ -370,9 +371,9 @@ export default function Home() {
   return (
     <main>
       <header>
-        <a className="brand" href="/">
+        <Link className="brand" href="/">
           <span className="brand-mark">≋</span> RAMEN TIME<sup>®</sup>
-        </a>
+        </Link>
         <div className="location">
           <i /> WORCESTER, MA <span>/</span> OPEN LATE
         </div>
@@ -534,7 +535,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="insistence">
-                <span>CHEF'S PATIENCE</span>
+                <span>CHEF&apos;S PATIENCE</span>
                 <span className="patience">
                   {"▰".repeat(5 - refusals)}
                   <span className="muted">{"▱".repeat(refusals)}</span>
@@ -652,7 +653,7 @@ export default function Home() {
                 disabled={!selected.includes("noodles")}
                 onClick={duel}
               >
-                BOWL'S READY. WHAT'S NEXT? <span>→</span>
+                BOWL&apos;S READY. WHAT&apos;S NEXT? <span>→</span>
               </button>
               <p className="tiny">
                 {selected.includes("noodles")
@@ -852,7 +853,7 @@ export default function Home() {
               : ""}
           </p>
           <button className="text-button" onClick={() => H(false)}>
-            Got it. Let's eat. ×
+            Got it. Let&apos;s eat. ×
           </button>
         </aside>
       )}
