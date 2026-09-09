@@ -1,8 +1,8 @@
 {
-  "pid": 4511,
+  "pid": 6067,
   "port": 3000,
   "hostname": "localhost",
   "appUrl": "http://localhost:3000",
-  "startedAt": 1788985700728,
+  "startedAt": 1788986367503,
   "cwd": "/vercel/share/v0-project"
 }
