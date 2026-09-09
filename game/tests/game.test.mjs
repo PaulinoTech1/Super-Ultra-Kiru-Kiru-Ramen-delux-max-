@@ -1,0 +1,23 @@
+﻿import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeDeck,drawRound,openingReply} from '../app/rules.mjs';
+test('deck has exactly 52 unique cards, four of each rank, and ace high',()=>{const deck=makeDeck();assert.equal(deck.length,52);assert.equal(new Set(deck.map(c=>c.label+c.suit)).size,52);for(let rank=2;rank<=14;rank++)assert.equal(deck.filter(c=>c.rank===rank).length,4);assert.ok(deck.filter(c=>c.label==='A').every(c=>c.rank===14));});
+test('ace beats king and lower player card loses',()=>{const d=makeDeck();const ace=d.find(c=>c.label==='A'),king=d.find(c=>c.label==='K');assert.equal(drawRound([ace,king]).winner,'player');assert.equal(drawRound([king,ace]).winner,'chef');});
+test('tie discards both cards and next draw uses the remaining deck',()=>{const d=makeDeck();const a=d.filter(c=>c.label==='A');const k=d.find(c=>c.label==='K'),two=d.find(c=>c.label==='2');const first=drawRound([a[0],a[1],k,two]);assert.equal(first.winner,'tie');assert.deepEqual(first.remaining,[k,two]);assert.equal(drawRound(first.remaining).winner,'player');});
+test('all ties can exhaust the deck without crashing',()=>{const d=makeDeck().sort((a,b)=>a.rank-b.rank);let result;for(let i=0;i<26;i++){result=drawRound(d.splice(0));d.push(...result.remaining)}assert.equal(result.winner,'draw');assert.equal(d.length,0);});
+test('five refusals reach the final ramen-only response',()=>{const messages=Array.from({length:6},(_,i)=>openingReply(i));assert.equal(new Set(messages).size,6);assert.match(messages[1],/I think you want ramen/);assert.match(messages[5],/THAT'S IT/);assert.equal(openingReply(9),messages[5]);});
+test('shuffle changes order without mutating card inventory',()=>{const a=makeDeck(()=>0),b=makeDeck(()=>.9999);assert.notDeepEqual(a,b);assert.deepEqual(a.map(c=>c.label+c.suit).sort(),b.map(c=>c.label+c.suit).sort());});
+
+import {needsChickenBoss, chickenX, eggHitsChicken, scoreEgg} from '../app/chicken-rules.mjs';
+test('miniboss starts only beyond three ajitama',()=>{for(const n of [0,1,2,3])assert.equal(needsChickenBoss(n),false);assert.equal(needsChickenBoss(4),true);});
+test('egg collision checks both coordinates at the moving chicken position',()=>{assert.equal(eggHitsChicken(chickenX(1),145,1),true);assert.equal(eggHitsChicken(chickenX(1)+40,145,1),false);assert.equal(eggHitsChicken(chickenX(1),210,1),false);assert.equal(eggHitsChicken(chickenX(0),145,1),false);});
+test('three hits earn victory; misses do not advance progress',()=>{let hits=0;hits=scoreEgg(hits,false);assert.equal(hits,0);hits=scoreEgg(hits,true);hits=scoreEgg(hits,true);assert.equal(hits,2);hits=scoreEgg(hits,false);assert.equal(hits,2);hits=scoreEgg(hits,true);assert.equal(hits,3);assert.equal(scoreEgg(hits,true),3);});
+
+import {addAjitama, ajitamaPositions} from '../app/chicken-rules.mjs';
+test('ajitama increments past two and never exceeds four',()=>{let eggs=0;const counts=[];for(let i=0;i<6;i++){eggs=addAjitama(eggs);counts.push(eggs)}assert.deepEqual(counts,[1,2,3,4,4,4]);});
+test('third and fourth ajitama stack above the first pair',()=>{const p=ajitamaPositions(4);assert.equal(p.length,4);assert.equal(p[0].y,p[1].y);assert.equal(p[2].y,p[3].y);assert.equal(p[0].x,p[2].x);assert.equal(p[1].x,p[3].x);assert.ok(p[2].y<p[0].y);assert.equal(ajitamaPositions(5).length,4);assert.equal(ajitamaPositions(0).length,0);});
+
+import {BOWLS,rollBowl,thirdStep,watchChefIdle} from '../app/kitchen-rules.mjs';
+test('die selects exactly six unique bowls with distinct glazes and patterns',()=>{assert.equal(BOWLS.length,6);for(const key of ['name','body','pattern'])assert.equal(new Set(BOWLS.map(b=>b[key])).size,6);for(let i=0;i<6;i++)assert.equal(rollBowl(()=>(i+.5)/6),i);assert.equal(rollBowl(()=>0),0);assert.equal(rollBowl(()=>.999999),5);});
+test('step three stays hidden until its encounter is reached',()=>{for(const stage of ['roll','welcome','build'])assert.equal(thirdStep(stage),'??');assert.equal(thirdStep('duel'),'DUEL THE CHEF');assert.equal(thirdStep('over'),'DUEL THE CHEF');assert.equal(thirdStep('boss'),'SECRET MINIBOSS');});
+test('chef sleeps only after thirty idle seconds and wakes on activity',context=>{context.mock.timers.enable({apis:['setTimeout']});const changes=[];const idle=watchChefIdle(v=>changes.push(v));context.mock.timers.tick(29999);assert.deepEqual(changes,[]);idle.activity();context.mock.timers.tick(29999);assert.deepEqual(changes,[]);context.mock.timers.tick(1);assert.deepEqual(changes,[true]);idle.activity();assert.deepEqual(changes,[true,false]);idle.dispose();context.mock.timers.tick(30000);assert.deepEqual(changes,[true,false]);});
