@@ -1,10 +1,15 @@
 /* Keep the complete game usable in a narrow phone viewport. */
 @media (max-width: 640px) {
-  main { padding: 0 14px; }
-  header { min-height: 72px; height: auto; padding: 14px 0; flex-wrap: wrap; }
+  main { padding: 0 10px; }
+  header { min-height: 48px; height: 48px; padding: 8px 0; flex-wrap: nowrap; }
+  .intro, .steps { display: none; }
   .brand { font-size: 18px; gap: 8px; }
   .brand-mark { font-size: 25px; line-height: 24px; }
-  .location { order: 3; width: 100%; font-size: 8px; }
+  .location { order: 0; width: auto; font-size: 7px; margin-left: auto; }
+  .location > span { padding: 0 4px; }
+  .brand { font-size: 15px; }
+  .brand-mark { font-size: 21px; }
+  .sound { padding: 6px 7px; font-size: 8px; }
   .location > span { padding: 0 8px; }
   .sound { padding: 9px 10px; font-size: 9px; }
   .intro { align-items: flex-start; padding: 28px 0 24px; }
@@ -47,11 +52,20 @@
   .scene-side .footnote { display: none; }
   .scene-top, .scene-bottom { gap: 8px; line-height: 1.5; flex-wrap: wrap; }
   .scene-top button, .scene-bottom button { font-size: 8px; }
-  .dialogue { gap: 10px; padding: 12px; margin-top: 10px; box-shadow: 3px 3px 0 #171c17; }
+  .dialogue { gap: 7px; padding: 8px; margin-top: 6px; box-shadow: 2px 2px 0 #171c17; }
+  .dialogue p { font-size: 8px; line-height: 1.35; }
+  .dialogue .eyebrow { font-size: 7px; }
+  .scene-top, .scene-bottom { min-height: 22px; font-size: 6px; }
   .dialogue p { min-width: 0; margin: 0; font-size: 10px; line-height: 1.7; overflow-wrap: anywhere; }
   .dialogue > div:last-child { min-width: 0; }
   .dialogue .muted { display: none; }
-  .panel { min-height: 0; padding: 16px; }
+  .panel { min-height: 0; padding: 10px; }
+  .panel h2 { font-size: 18px; }
+  .panel .description { margin: 4px 0 8px; font-size: 8px; line-height: 1.35; }
+  .panel .cravings { max-height: 132px; padding-top: 24px; }
+  .cravings button { min-height: 42px; padding: 7px 8px; }
+  .cravings button small { font-size: 6px; }
+  .food-icon { font-size: 15px; }
   .panel-title { gap: 10px; }
   .panel-title h2, h2 { font-size: 24px; line-height: 1.1; }
   .description { font-size: 10px; line-height: 1.65; }
