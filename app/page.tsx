@@ -304,7 +304,7 @@ export default function Home() {
     A(next);
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
     if (needsChickenBoss(next)) {
-      E("Sorry, the wild chickens have us on rations currently.");
+      E("Sorry, the wild chicken has us on rations.");
       S("boss-intro");
     }
   }
@@ -350,7 +350,7 @@ export default function Home() {
         ? "Chief Ramen Officer reporting for duty. Roll the die. Six bowls, one destiny."
         : `A ${bowlIndex + 1}! ${BOWLS[bowlIndex].name}. That's your bowl for this order.`
       : stage === "boss-intro"
-        ? "Sorry, the wild chickens have us on rations currently."
+        ? "Sorry, the wild chicken has us on rations."
         : stage === "boss"
           ? "FOUR ajitama?! You've summoned the Shrewsbury Street chicken. Three hits. Save my shop!"
           : stage === "goat"
