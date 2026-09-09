@@ -33,7 +33,7 @@
   .game-layout > .panel { order: 2; position: static; }
   .scene-side canvas, .boss-game canvas { display: block; width: 100%; height: auto; }
   .panel .cravings { max-height: 224px; overflow-y: scroll; overscroll-behavior: contain; padding: 28px 5px 5px 0; scrollbar-gutter: stable; position: relative; }
-  .panel .cravings::before { content: "OPTIONS — SCROLL TO BROWSE"; display: block; position: absolute; inset: 0 5px auto 0; z-index: 1; padding: 6px 0 8px; background: var(--panel-bg); color: var(--muted); font-family: var(--font-mono); font-size: 8px; letter-spacing: .8px; text-align: center; pointer-events: none; }
+  .panel .cravings::before { content: "OPTIONS — SCROLL TO BROWSE"; display: block; position: absolute; inset: 0 5px auto 0; z-index: 1; padding: 6px 0 8px; background: var(--panel-bg); color: var(--muted); font-family: var(--font-mono); font-size: 9px; letter-spacing: .7px; text-align: center; pointer-events: none; }
   .panel .cravings button { width: 100%; }
   .scene-top, .scene-bottom { font-size: 7px; letter-spacing: .4px; }
   .scene-top button, .scene-bottom button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -56,15 +56,15 @@
   .dialogue p { font-size: 8px; line-height: 1.35; }
   .dialogue .eyebrow { font-size: 7px; }
   .scene-top, .scene-bottom { min-height: 22px; font-size: 6px; }
-  .dialogue p { min-width: 0; margin: 0; font-size: 10px; line-height: 1.7; overflow-wrap: anywhere; }
+  .dialogue p { min-width: 0; margin: 0; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
   .dialogue > div:last-child { min-width: 0; }
   .dialogue .muted { display: none; }
   .panel { min-height: 0; padding: 10px; }
   .panel h2 { font-size: 18px; }
-  .panel .description { margin: 4px 0 8px; font-size: 8px; line-height: 1.35; }
+  .panel .description { margin: 4px 0 8px; font-size: 11px; line-height: 1.5; }
   .panel .cravings { max-height: 132px; padding-top: 24px; }
   .cravings button { min-height: 42px; padding: 7px 8px; }
-  .cravings button small { font-size: 6px; }
+  .cravings button small { font-size: 8px; line-height: 1.35; }
   .food-icon { font-size: 15px; }
   .panel-title { gap: 10px; }
   .panel-title h2, h2 { font-size: 24px; line-height: 1.1; }
@@ -73,7 +73,7 @@
   .tabs button { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 7px; letter-spacing: .5px; }
   .ingredients { grid-template-columns: 1fr; gap: 6px; }
   .ingredient { min-width: 0; padding: 11px 10px; }
-  .cravings button { min-height: 58px; padding: 12px 10px; }
+  .cravings button { min-height: 58px; padding: 12px 10px; font-size: 10px; line-height: 1.35; }
   .primary { min-height: 50px; padding: 15px 13px; }
   .bowl-collection { gap: 6px; margin: 16px 0; }
   .bowl-collection li { min-width: 0; padding: 9px 6px; font-size: 7px; }
