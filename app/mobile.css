@@ -19,12 +19,17 @@
   .steps span { flex-shrink: 0; padding: 3px; font-size: 7px; }
   .steps b { display: none; }
   .game-layout { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .game-layout > .scene-side { order: 1; }
+  .game-layout > .panel { order: 2; position: static; }
   .game-layout > .scene-side, .game-layout > .panel { width: 100%; min-width: 0; }
   .scene-side, .control-side, .panel { min-width: 0; max-width: 100%; }
   .scene-side > *, .panel > * { min-width: 0; max-width: 100%; }
   .scene-side *, .panel * { overflow-wrap: anywhere; }
   .game-layout > .panel { order: 2; position: static; }
   .scene-side canvas, .boss-game canvas { display: block; width: 100%; height: auto; }
+  .panel .cravings { max-height: 224px; overflow-y: scroll; overscroll-behavior: contain; padding: 28px 5px 5px 0; scrollbar-gutter: stable; position: relative; }
+  .panel .cravings::before { content: "OPTIONS — SCROLL TO BROWSE"; display: block; position: absolute; inset: 0 5px auto 0; z-index: 1; padding: 6px 0 8px; background: var(--panel-bg); color: var(--muted); font-family: var(--font-mono); font-size: 8px; letter-spacing: .8px; text-align: center; pointer-events: none; }
+  .panel .cravings button { width: 100%; }
   .scene-top, .scene-bottom { font-size: 7px; letter-spacing: .4px; }
   .scene-top button, .scene-bottom button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dialogue { gap: 7px; padding: 9px; }
