@@ -1,0 +1,53 @@
+/* Keep the complete game usable in a narrow phone viewport. */
+@media (max-width: 640px) {
+  main { padding: 0 14px; }
+  header { min-height: 72px; height: auto; padding: 14px 0; flex-wrap: wrap; }
+  .brand { font-size: 18px; gap: 8px; }
+  .brand-mark { font-size: 25px; line-height: 24px; }
+  .location { order: 3; width: 100%; font-size: 8px; }
+  .location > span { padding: 0 8px; }
+  .sound { padding: 9px 10px; font-size: 9px; }
+  .intro { align-items: flex-start; padding: 28px 0 24px; }
+  .intro > div:first-child { min-width: 0; }
+  .stamp { display: none; }
+  h1 { font-size: clamp(38px, 13vw, 56px); letter-spacing: -2px; }
+  h1 sup { font-size: 20px; padding-left: 5px; }
+  .subtitle { font-size: 11px; line-height: 1.65; }
+  .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 14px; }
+  .steps div { min-width: 0; padding: 11px 3px; gap: 5px; font-size: 7px; letter-spacing: 0; line-height: 1.35; }
+  .steps div:first-child { padding-left: 3px; }
+  .steps span { flex-shrink: 0; padding: 3px; font-size: 7px; }
+  .steps b { display: none; }
+  .game-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .scene-side, .control-side { min-width: 0; }
+  .scene-top, .scene-bottom { gap: 8px; line-height: 1.5; flex-wrap: wrap; }
+  .scene-top button, .scene-bottom button { font-size: 8px; }
+  .dialogue { gap: 10px; padding: 12px; margin-top: 10px; box-shadow: 3px 3px 0 #171c17; }
+  .dialogue p { font-size: 10px; line-height: 1.7; }
+  .dialogue .muted { display: none; }
+  .panel { min-height: 0; padding: 16px; }
+  .panel-title { gap: 10px; }
+  .panel-title h2, h2 { font-size: 24px; line-height: 1.1; }
+  .description { font-size: 10px; line-height: 1.65; }
+  .tabs { gap: 3px; }
+  .tabs button { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 7px; letter-spacing: .5px; }
+  .ingredients { grid-template-columns: 1fr; gap: 6px; }
+  .ingredient { min-width: 0; padding: 11px 10px; }
+  .cravings button { min-height: 58px; padding: 12px 10px; }
+  .primary { min-height: 50px; padding: 15px 13px; }
+  .bowl-collection { gap: 6px; margin: 16px 0; }
+  .bowl-collection li { min-width: 0; padding: 9px 6px; font-size: 7px; }
+  .egg-stepper button { min-height: 44px; }
+  .boss-score { align-items: flex-start; gap: 9px; padding: 10px; }
+  .boss-score > span { font-size: 20px; letter-spacing: 2px; }
+  .boss-score p { min-width: 0; font-size: 9px; line-height: 1.45; }
+  .boss-controls { padding: 7px 8px 10px; font-size: 8px; letter-spacing: .6px; line-height: 1.5; }
+  .boss-warning { padding: 14px 10px; font-size: 15px; }
+  .boss-warning span { font-size: 24px; letter-spacing: 7px; }
+  .goat-badge { font-size: 27px; padding: 18px 8px; }
+  footer { align-items: flex-start; gap: 12px; margin-top: 22px; padding: 17px 0 24px; line-height: 1.5; }
+  footer button { min-height: 36px; }
+  .footer-note { width: 100%; }
+  .help { padding: 15px; margin-bottom: 18px; }
+  .help p { font-size: 10px; line-height: 1.7; }
+}
