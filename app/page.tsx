@@ -73,8 +73,9 @@ function Shop({
     t("THE HEART OF THE COMMONWEALTH", 49, 84, "#9caa91", 6);
     r(268, 33, 126, 70, "#171c18");
     r(274, 39, 114, 58, "#8d4932");
-    t("RAMEN", 282, 67, "#f4d59a", 23);
-    t("HOT BOWLS / GOOD SOULS", 280, 86, "#ebc18a", 8);
+    t("KURU KURU", 292, 51, "#f0c56f", 9);
+    t("RAMEN", 282, 70, "#f4d59a", 23);
+    t("HOT BOWLS / GOOD SOULS", 280, 89, "#ebc18a", 8);
     for (const x of [235, 421]) {
       r(x + 11, 0, 2, 32, "#b18754");
       r(x + 3, 32, 22, 7, "#734930");
@@ -348,7 +349,9 @@ export default function Home() {
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
     if (needsChickenBoss(next)) {
       const hotSauceTriggered = selected.includes("hot");
-      const allToppingsBeforeEggs = items.filter(([id]) => id !== "ajitama").every(([id]) => selected.includes(id));
+      const allToppingsBeforeEggs = items
+        .filter(([id]) => id !== "ajitama" && id !== "noodles")
+        .every(([id]) => selected.includes(id));
       setGoldenChicken(allToppingsBeforeEggs);
       setFieryChicken(!allToppingsBeforeEggs && hotSauceTriggered);
       E(allToppingsBeforeEggs
