@@ -278,7 +278,8 @@ export default function Home() {
     [sleepy, setSleepy] = useState(false),
     [fieryChicken, setFieryChicken] = useState(false),
     [goldenChicken, setGoldenChicken] = useState(false),
-    [knockedBottles, setKnockedBottles] = useState<number[]>([]);
+    [knockedBottles, setKnockedBottles] = useState<number[]>([]),
+    [duelLoss, setDuelLoss] = useState(false);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -426,6 +427,7 @@ export default function Home() {
     if (result.winner === "player") {
       E("You win the card duel. Chef Kenji lets you stay on the counter.");
     } else if (result.winner !== "tie") {
+      setDuelLoss(true);
       E("Chef Kenji wins. You're kicked off the counter. Click the apology to restart.");
       S("over");
     }
@@ -436,6 +438,7 @@ export default function Home() {
     setFieryChicken(false);
     setGoldenChicken(false);
     setKnockedBottles([]);
+    setDuelLoss(false);
     A(0);
     U([]);
     R(0);
@@ -943,7 +946,7 @@ export default function Home() {
                         : "✦ THE CHEF WINS. THE RAMEN IS STILL YOURS."}
                   </div>
   <button className="primary" onClick={reset}>
-  {round?.winner === "chef" ? "MY BAD, I JUST REALLY NEEDED RAMEN TODAY." : "ANOTHER BOWL?"} <span>↻</span>
+  {duelLoss ? "MY BAD, I JUST REALLY NEEDED RAMEN TODAY." : "ANOTHER BOWL?"} <span>↻</span>
   </button>
   </>
   ) : (
