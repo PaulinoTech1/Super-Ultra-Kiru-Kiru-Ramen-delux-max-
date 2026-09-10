@@ -249,6 +249,8 @@ export default function Home() {
     [eggs, A] = useState(0),
     [bowlIndex, setBowlIndex] = useState<number | null>(null),
     [sleepy, setSleepy] = useState(false);
+  const musicRef = useRef<AudioContext | null>(null);
+  const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const idle = watchChefIdle(setSleepy);
     const events = [
@@ -267,6 +269,44 @@ export default function Home() {
         window.removeEventListener(event, idle.activity);
     };
   }, []);
+  useEffect(() => {
+    if (!sound) {
+      if (musicTimerRef.current) clearTimeout(musicTimerRef.current);
+      musicTimerRef.current = null;
+      void musicRef.current?.close();
+      musicRef.current = null;
+      return;
+    }
+    const AudioContextClass = window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audio = new AudioContextClass();
+    musicRef.current = audio;
+    const notes = [146.83, 174.61, 220, 261.63, 293.66, 261.63, 220, 174.61];
+    let index = 0;
+    const playNote = () => {
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = notes[index % notes.length];
+      gain.gain.setValueAtTime(0.0001, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.018, audio.currentTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.48);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start();
+      oscillator.stop(audio.currentTime + 0.5);
+      index += 1;
+      musicTimerRef.current = setTimeout(playNote, 620);
+    };
+    void audio.resume().then(playNote);
+    return () => {
+      if (musicTimerRef.current) clearTimeout(musicTimerRef.current);
+      musicTimerRef.current = null;
+      void audio.close();
+      if (musicRef.current === audio) musicRef.current = null;
+    };
+  }, [sound]);
   function roll() {
     if (bowlIndex !== null) return;
     beep();
