@@ -349,7 +349,9 @@ export default function Home() {
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
     if (needsChickenBoss(next)) {
       const hotSauceTriggered = selected.includes("hot");
-      const allToppingsBeforeEggs = items.filter(([id]) => id !== "ajitama").every(([id]) => selected.includes(id));
+      const allToppingsBeforeEggs = items
+        .filter(([id]) => id !== "ajitama" && id !== "noodles")
+        .every(([id]) => selected.includes(id));
       setGoldenChicken(allToppingsBeforeEggs);
       setFieryChicken(!allToppingsBeforeEggs && hotSauceTriggered);
       E(allToppingsBeforeEggs
