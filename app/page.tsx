@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
-import { BOWLS, rollBowl, thirdStep, watchChefIdle } from "./kitchen-rules.mjs";
-import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
+import { BOWLS, rollBowl, thirdStep } from "./kitchen-rules.mjs";
+import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
   needsChickenBoss,
   MAX_AJITAMA,
@@ -281,9 +281,8 @@ export default function Home() {
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
     [duelLoss, setDuelLoss] = useState(false),
-    [discoveries, setDiscoveries] = useState<string[]>(() => loadDiscoveries()),
-    [specialSign] = useState(() => specialSigns[Math.floor(Math.random() * specialSigns.length)]);
-  const previousSleepy = useRef(false);
+    [discoveries, setDiscoveries] = useState<string[]>([]),
+    [specialSign] = useState<string>(specialSigns[0]);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -292,27 +291,27 @@ export default function Home() {
   function discover(id: string) {
     setDiscoveries((current) => current.includes(id) ? current : [...current, id]);
   }
+  function revealSecret(text: string, discovery?: string) {
+    if (!canPlay) return;
+    if (discovery) discover(discovery);
+    E(text);
+  }
+  const canPlay = !sleepy;
   useEffect(() => {
-    previousSleepy.current = sleepy;
-  }, [sleepy]);
-  useEffect(() => {
-    const idle = watchChefIdle(setSleepy);
-    const events = [
-      "pointerdown",
-      "pointermove",
-      "keydown",
-      "wheel",
-      "scroll",
-      "focus",
-    ];
-    for (const event of events)
-      window.addEventListener(event, idle.activity, { passive: true });
-    return () => {
-      idle.dispose();
-      for (const event of events)
-        window.removeEventListener(event, idle.activity);
+    const eligible = stage === "roll" || stage === "welcome" || stage === "build";
+    if (!eligible || sleepy) return;
+    let timer = window.setTimeout(() => setSleepy(true), 30_000);
+    const activity = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setSleepy(true), 30_000);
     };
-  }, []);
+    const events = ["pointerdown", "pointermove", "keydown", "wheel", "scroll", "focus"];
+    for (const event of events) window.addEventListener(event, activity, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      for (const event of events) window.removeEventListener(event, activity);
+    };
+  }, [stage, sleepy]);
   useEffect(() => {
     if (!sound) {
       if (musicTimerRef.current) clearTimeout(musicTimerRef.current);
@@ -352,12 +351,13 @@ export default function Home() {
     };
   }, [sound]);
   function roll() {
-    if (bowlIndex !== null) return;
+    if (!canPlay || bowlIndex !== null) return;
     beep();
     setBowlIndex(rollBowl());
   }
 
   function confirmBowl() {
+    if (!canPlay) return;
     if (bowlIndex !== null) {
       E(bowlGreetings[BOWLS[bowlIndex].name] || "A bowl with excellent instincts.");
     }
@@ -383,11 +383,12 @@ export default function Home() {
   function wakeChef() {
     if (sleepy) {
       discover("wake");
-      if (stage === "build") E("I was inspecting the inside of my eyelids.");
+      E("I was inspecting the inside of my eyelids.");
       setSleepy(false);
     }
   }
   function choose(ramen: boolean) {
+    if (!canPlay) return;
     beep();
     if (ramen) S("build");
     else {
@@ -398,6 +399,7 @@ export default function Home() {
     }
   }
   function toggle(id: string) {
+    if (!canPlay) return;
     beep();
     const removing = selected.includes(id);
     const next = removing ? selected.filter((x) => x !== id) : [...selected, id];
@@ -411,7 +413,7 @@ export default function Home() {
     if (next.includes("corn") && next.includes("hot")) discover("sweet-heat");
   }
   function addEgg() {
-    if (stage !== "build" || eggs >= MAX_AJITAMA) return;
+    if (!canPlay || stage !== "build" || eggs >= MAX_AJITAMA) return;
     beep();
     const next = addAjitama(eggs);
     A(next);
@@ -435,13 +437,13 @@ export default function Home() {
     }
   }
   function removeEgg() {
-    if (stage !== "build" || eggs === 0) return;
+    if (!canPlay || stage !== "build" || eggs === 0) return;
     beep();
     A(eggs - 1);
     if (eggs === 1) U((v) => v.filter((x) => x !== "ajitama"));
   }
   function knockBottle(index: number) {
-    if (stage !== "build" || knockedBottles.includes(index)) return;
+    if (!canPlay || stage !== "build" || knockedBottles.includes(index)) return;
     beep();
     const next = [...knockedBottles, index];
     setKnockedBottles(next);
@@ -459,12 +461,14 @@ export default function Home() {
     S("goat");
   }
   function duel() {
+    if (!canPlay) return;
     beep();
     D(makeDeck());
     Q(null);
     S("duel");
   }
   function draw() {
+    if (!canPlay) return;
     beep();
     const result = drawRound(deck);
     D(result.remaining);
@@ -493,8 +497,9 @@ export default function Home() {
     E("");
     T("ALL");
   }
-  const message =
-    stage === "roll"
+  const message = sleepy
+    ? "Chef Kenji has dozed off. Wake him to continue."
+    : stage === "roll"
       ? bowlIndex === null
         ? "Chief Ramen Officer reporting for duty. Roll the die. Six bowls, one destiny."
         : `A ${bowlIndex + 1}! ${BOWLS[bowlIndex].name}. That's your bowl for this order.`
@@ -532,8 +537,7 @@ export default function Home() {
             const taps = logoTaps + 1;
             L(taps === 3 ? 0 : taps);
             if (taps === 3) {
-              discover("logo");
-              E("Kuru kuru means round and round. Chef says every great bowl deserves another lap.");
+              revealSecret("Kuru kuru means round and round. Chef says every great bowl deserves another lap.", "logo");
             }
           }}
           aria-label="Ramen Time secret logo"
@@ -543,7 +547,7 @@ export default function Home() {
         <button
           className="location"
           type="button"
-          onClick={() => E("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.")}
+          onClick={() => revealSecret("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.")}
         >
           <i /> WORCESTER, MA <span>/</span> OPEN LATE
         </button>
@@ -572,7 +576,7 @@ export default function Home() {
         <button
           className="stamp"
           type="button"
-          onClick={() => { discover("sign"); E("The 508 is home base: a little city, a big heart, and a bowl worth talking about."); }}
+          onClick={() => revealSecret("The 508 is home base: a little city, a big heart, and a bowl worth talking about.", "sign")}
           aria-label="Reveal the 508 ramen secret"
         >
           MADE WITH
@@ -614,7 +618,7 @@ export default function Home() {
             </span>
             <button
               onClick={() =>
-                E(
+                revealSecret(
                   "Order 508. A little love for the local area code. Ask for the diner-car special next time.",
                 )
               }
@@ -638,7 +642,7 @@ export default function Home() {
             <span>✦ {specialSign}</span>
             <button
               onClick={() =>
-                E(
+                revealSecret(
                   "It's pronounced WUSS-ter. Chef has removed one syllable and added one extra noodle.",
                 )
               }
@@ -655,9 +659,9 @@ export default function Home() {
                 CHEF KENJI <span className="muted">/ CHIEF RAMEN OFFICER</span>
               </p>
               <p>“{secret || message}”</p>
-              {sleepy && <button className="text-button" onClick={wakeChef}>Wake Chef Kenji →</button>}
+              {sleepy && <button className="wake-button" type="button" aria-label="Wake Chef Kenji" onClick={(event) => { event.stopPropagation(); wakeChef(); }}>Wake Chef Kenji →</button>}
               {secret && (
-                <button className="text-button" onClick={() => E("")}>
+                <button className="text-button" onClick={() => canPlay && E("")}>
                   Back to the counter →
                 </button>
               )}
@@ -1017,7 +1021,7 @@ export default function Home() {
         <summary>DISCOVERY LOG ({discoveries.length}/{discoveryDefinitions.length})</summary>
         <div>
           {discoveryDefinitions.map(([id, label, hint]) => (
-            <button key={id} type="button" onClick={() => !discoveries.includes(id) && E(hint)}>
+            <button key={id} type="button" onClick={() => !discoveries.includes(id) && revealSecret(hint)}>
               <span>{discoveries.includes(id) ? "✓" : "???"}</span> {discoveries.includes(id) ? label : "Undiscovered"}
             </button>
           ))}

@@ -87,6 +87,7 @@
   .boss-warning { padding: 14px 10px; font-size: 15px; }
   .boss-warning span { font-size: 24px; letter-spacing: 7px; }
   .goat-badge { font-size: 27px; padding: 18px 8px; }
+  .wake-button { width: 100%; min-height: 52px; font-size: 11px; }
   .discoveries>div { grid-template-columns: 1fr; }
   .discoveries button { font-size: 9px; }
   footer { align-items: flex-start; gap: 12px; margin-top: 22px; padding: 17px 0 24px; line-height: 1.5; }
