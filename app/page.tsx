@@ -5,7 +5,7 @@ import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
 import { BOWLS, rollBowl, thirdStep, watchChefIdle } from "./kitchen-rules.mjs";
-import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
+import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
   needsChickenBoss,
   MAX_AJITAMA,
@@ -281,8 +281,8 @@ export default function Home() {
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
     [duelLoss, setDuelLoss] = useState(false),
-    [discoveries, setDiscoveries] = useState<string[]>(() => loadDiscoveries()),
-    [specialSign] = useState(() => specialSigns[Math.floor(Math.random() * specialSigns.length)]);
+    [discoveries, setDiscoveries] = useState<string[]>([]),
+    [specialSign] = useState<string>(specialSigns[0]);
   const previousSleepy = useRef(false);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
