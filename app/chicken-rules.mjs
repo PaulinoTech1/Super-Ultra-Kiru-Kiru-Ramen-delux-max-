@@ -1,4 +1,5 @@
 export const BOSS_HITS = 3;
+export const FIERY_BOSS_HITS = 4;
 export const MAX_AJITAMA = 4;
 export function addAjitama(eggs) { return Math.min(MAX_AJITAMA, eggs + 1); }
 export function ajitamaPositions(eggs) {
@@ -13,4 +14,4 @@ export function chickenX(seconds) { return 320 + Math.sin(seconds * 1.7) * 225; 
 export function eggHitsChicken(x, y, seconds) {
   return Math.abs(x - chickenX(seconds)) <= 36 && Math.abs(y - 145) <= 32;
 }
-export function scoreEgg(hits, hit) { return Math.min(BOSS_HITS, hits + (hit ? 1 : 0)); }
+export function scoreEgg(hits, hit, target = BOSS_HITS) { return Math.min(target, hits + (hit ? 1 : 0)); }
