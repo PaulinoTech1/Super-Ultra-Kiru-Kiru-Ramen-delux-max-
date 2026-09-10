@@ -92,6 +92,7 @@
   .goat-badge { font-size: 27px; padding: 18px 8px; }
   .wake-button { width: 100%; min-height: 52px; font-size: 11px; }
   .discoveries>div { grid-template-columns: 1fr; }
+  .discovery-entry small { font-size: 10px; line-height: 1.5; }
   .discoveries button { font-size: 9px; }
   footer { align-items: flex-start; gap: 12px; margin-top: 22px; padding: 17px 0 24px; line-height: 1.5; }
   footer button { min-height: 36px; }

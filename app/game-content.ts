@@ -27,12 +27,21 @@ export const specialSigns = [
 ] as const;
 
 export const discoveryDefinitions = [
-  ["patience", "Exhaust the chef’s patience.", "Try the forbidden menu choices."],
-  ["wake", "Wake the chef.", "Tap through a sleepy moment."],
-  ["logo", "Discover the logo secret.", "Tap the ramen mark three times."],
-  ["bottles", "Knock over both bottles.", "Tap the bottles on the counter."],
-  ["sign", "Discover the restaurant sign’s secret.", "Tap the 508 stamp."],
-  ["sweet-heat", "Make The Sweet Heat.", "Combine corn and hot sauce."],
+  ["patience", "Chef’s Patience", "Some cravings test a chef’s hospitality.", "Reach the final refusal level that removes the non-ramen choices."],
+  ["wake", "Sleeping on the Job", "Even the person making dinner needs a break.", "Activate the wake button while Chef Kenji is asleep."],
+  ["logo", "Round and Round", "First impressions sometimes deserve another look. And another.", "Activate the triple-tap logo secret."],
+  ["bottles", "Counter Menace", "A little clumsiness can change the evening.", "Knock over both bottles during bowl building."],
+  ["sign", "Local Soul", "There’s hometown pride stamped on this place.", "Activate the 508 stamp secret."],
+  ["sweet-heat", "The Sweet Heat", "A little sunshine can have a dangerous side.", "Have corn and hot sauce selected together."],
+  ["location", "Find Your Way", "Every good bowl comes from somewhere.", "Activate the location message."],
+  ["order", "Your Number’s Up", "Your order number might mean more than your place in line.", "Activate the Order #0508 message."],
+  ["local-say", "Say It Like a Local", "The city’s name has fewer sounds than you might expect.", "Activate the Worcester pronunciation joke."],
+  ["fridge", "The Entire Fridge", "Restraint is one approach. There is another.", "Select every available ingredient simultaneously."],
+  ["minimalist", "The Minimalist", "Sometimes the essentials are enough.", "Select noodles with no other ingredients."],
+  ["chicken", "An Unexpected Guest", "The kitchen’s generosity has its limits.", "Enter the normal chicken encounter."],
+  ["fiery", "Too Hot to Handle", "A little heat can make a surprise much less ordinary.", "Enter the fiery chicken encounter."],
+  ["golden", "A Golden Problem", "An extravagant order may attract extravagant company.", "Enter the golden chicken encounter."],
+  ["goat", "Absolute GOAT", "Some customers leave with more than a full bowl.", "Win a chicken encounter and reach its victory ending."],
 ] as const;
 
 export function bowlNickname(selected: string[], allIngredients: string[]) {
@@ -51,14 +60,20 @@ export function orderTitle(selected: string[], knockedBottles: number[], eggs: n
   return ["Minimalist", "Sometimes the quiet bowl wins."];
 }
 
+export const discoveryIds = new Set<string>(discoveryDefinitions.map(([id]) => id));
+
+export function validDiscoveries(ids: unknown): string[] {
+  if (!Array.isArray(ids)) return [];
+  return [...new Set(ids.filter((id): id is string => typeof id === "string" && discoveryIds.has(id)))];
+}
+
 export function loadDiscoveries() {
   try {
     const raw = window.localStorage.getItem("kuru-kuru-discoveries");
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+    return validDiscoveries(raw ? JSON.parse(raw) : []);
   } catch { return []; }
 }
 
 export function saveDiscoveries(ids: string[]) {
-  try { window.localStorage.setItem("kuru-kuru-discoveries", JSON.stringify([...new Set(ids)])); } catch { /* persistence is optional */ }
+  try { window.localStorage.setItem("kuru-kuru-discoveries", JSON.stringify(validDiscoveries(ids))); } catch { /* persistence is optional */ }
 }

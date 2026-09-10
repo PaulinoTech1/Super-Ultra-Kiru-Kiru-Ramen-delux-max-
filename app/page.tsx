@@ -5,7 +5,7 @@ import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
 import { BOWLS, rollBowl, thirdStep } from "./kitchen-rules.mjs";
-import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
+import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
   needsChickenBoss,
   MAX_AJITAMA,
@@ -281,15 +281,27 @@ export default function Home() {
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
     [duelLoss, setDuelLoss] = useState(false),
-    [discoveries, setDiscoveries] = useState<string[]>([]),
+    [discoveries, setDiscoveries] = useState<string[]>(() => {
+      if (typeof window === "undefined") return [];
+      return loadDiscoveries();
+    }),
+    [discoveryToast, setDiscoveryToast] = useState<string | null>(null),
     [specialSign] = useState<string>(specialSigns[0]);
+  const discoveriesReady = useRef(true);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    saveDiscoveries(discoveries);
+    if (discoveriesReady.current) saveDiscoveries(discoveries);
   }, [discoveries]);
   function discover(id: string) {
-    setDiscoveries((current) => current.includes(id) ? current : [...current, id]);
+    setDiscoveries((current) => {
+      if (current.includes(id)) return current;
+      const next = [...current, id];
+      const definition = discoveryDefinitions.find(([entryId]) => entryId === id);
+      if (definition) setDiscoveryToast(`Discovery unlocked: ${definition[1]}`);
+      if (discoveriesReady.current) saveDiscoveries(next);
+      return next;
+    });
   }
   function revealSecret(text: string, discovery?: string) {
     if (!canPlay) return;
@@ -297,6 +309,11 @@ export default function Home() {
     E(text);
   }
   const canPlay = !sleepy;
+  useEffect(() => {
+    if (!discoveryToast) return;
+    const timer = window.setTimeout(() => setDiscoveryToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [discoveryToast]);
   useEffect(() => {
     const eligible = stage === "roll" || stage === "welcome" || stage === "build";
     if (!eligible || sleepy) return;
@@ -418,6 +435,9 @@ export default function Home() {
     else if (id === "hot" && removing) E(ingredientReactions.hot.remove);
     else if (ingredientReactions[id as keyof typeof ingredientReactions]) E(ingredientReactions[id as keyof typeof ingredientReactions][removing ? "remove" : "add"]);
     if (next.includes("corn") && next.includes("hot")) discover("sweet-heat");
+    const selectable = items.filter(([itemId]) => itemId !== "ajitama").map(([itemId]) => itemId);
+    if (selectable.every((itemId) => next.includes(itemId))) discover("fridge");
+    if (next.length === 1 && next.includes("noodles")) discover("minimalist");
   }
   function addEgg() {
     if (!canPlay || stage !== "build" || eggs >= MAX_AJITAMA) return;
@@ -435,6 +455,7 @@ export default function Home() {
         .every(([id]) => selected.includes(id));
       setGoldenChicken(allToppingsBeforeEggs);
       setFieryChicken(!allToppingsBeforeEggs && hotSauceTriggered);
+      discover(allToppingsBeforeEggs ? "golden" : hotSauceTriggered ? "fiery" : "chicken");
       E(allToppingsBeforeEggs
         ? "Every topping before the fourth egg?! The golden chicken is here, and it throws electric eggs!"
         : hotSauceTriggered
@@ -463,6 +484,7 @@ export default function Home() {
     }
   }
   function bossWin() {
+    discover("goat");
     U((v) => (v.includes("noodles") ? v : [...v, "noodles"]));
     E("");
     S("goat");
@@ -554,7 +576,7 @@ export default function Home() {
         <button
           className="location"
           type="button"
-          onClick={() => revealSecret("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.")}
+          onClick={() => revealSecret("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.", "location")}
         >
           <i /> WORCESTER, MA <span>/</span> OPEN LATE
         </button>
@@ -627,6 +649,7 @@ export default function Home() {
               onClick={() =>
                 revealSecret(
                   "Order 508. A little love for the local area code. Ask for the diner-car special next time.",
+                  "order",
                 )
               }
             >
@@ -650,8 +673,9 @@ export default function Home() {
             <button
               onClick={() =>
                 revealSecret(
-                  "It's pronounced WUSS-ter. Chef has removed one syllable and added one extra noodle.",
-                )
+"It's pronounced WUSS-ter. Chef has removed one syllable and added one extra noodle.",
+                    "local-say",
+                  )
               }
             >
               WOOS-TAH, NOT WOR-CESTER ↗
@@ -1025,14 +1049,22 @@ export default function Home() {
           )}
         </div>
       </section>
+      {discoveryToast && <p className="discovery-toast" role="status">{discoveryToast}</p>}
       <details className="discoveries">
-        <summary>DISCOVERY LOG ({discoveries.length}/{discoveryDefinitions.length})</summary>
+        <summary>DISCOVERY LOG: {discoveries.length} / {discoveryDefinitions.length}</summary>
         <div>
-          {discoveryDefinitions.map(([id, label, hint]) => (
-            <button key={id} type="button" onClick={() => !discoveries.includes(id) && revealSecret(hint)}>
-              <span>{discoveries.includes(id) ? "✓" : "???"}</span> {discoveries.includes(id) ? label : "Undiscovered"}
-            </button>
-          ))}
+          {discoveryDefinitions.map(([id, label, hint, description]) => {
+            const unlocked = discoveries.includes(id);
+            return (
+              <div className="discovery-entry" key={id}>
+                <span className="discovery-icon" aria-hidden="true">{unlocked ? "✓" : "?"}</span>
+                <div>
+                  <strong>{unlocked ? label : "Undiscovered"}</strong>
+                  <small>{unlocked ? description : hint}</small>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </details>
       <footer>
