@@ -73,8 +73,9 @@ function Shop({
     t("THE HEART OF THE COMMONWEALTH", 49, 84, "#9caa91", 6);
     r(268, 33, 126, 70, "#171c18");
     r(274, 39, 114, 58, "#8d4932");
-    t("RAMEN", 282, 67, "#f4d59a", 23);
-    t("HOT BOWLS / GOOD SOULS", 280, 86, "#ebc18a", 8);
+    t("KIRU KIRU", 292, 51, "#f0c56f", 9);
+    t("RAMEN", 282, 70, "#f4d59a", 23);
+    t("HOT BOWLS / GOOD SOULS", 280, 89, "#ebc18a", 8);
     for (const x of [235, 421]) {
       r(x + 11, 0, 2, 32, "#b18754");
       r(x + 3, 32, 22, 7, "#734930");
