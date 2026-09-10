@@ -426,9 +426,8 @@ export default function Home() {
     if (result.winner === "player") {
       E("You win the card duel. Chef Kenji lets you stay on the counter.");
     } else if (result.winner !== "tie") {
-      E("Chef Kenji wins. You're kicked off the counter. The game is restarting.");
+      E("Chef Kenji wins. You're kicked off the counter. Click the apology to restart.");
       S("over");
-      window.setTimeout(reset, 1800);
     }
   }
   function reset() {
@@ -943,12 +942,12 @@ export default function Home() {
                         ? "ALL 52 CARDS TIED. EVEN CHEF IS IMPRESSED."
                         : "✦ THE CHEF WINS. THE RAMEN IS STILL YOURS."}
                   </div>
-                  <button className="primary" onClick={reset}>
-                    ANOTHER BOWL? <span>↻</span>
-                  </button>
-                </>
-              ) : (
-                <button className="primary" onClick={draw}>
+  <button className="primary" onClick={reset}>
+  {round?.winner === "chef" ? "MY BAD, I JUST REALLY NEEDED RAMEN TODAY." : "ANOTHER BOWL?"} <span>↻</span>
+  </button>
+  </>
+  ) : (
+  <button className="primary" onClick={draw}>
                   {round ? "DRAW AGAIN" : "DRAW YOUR CARDS"} <span>↗</span>
                 </button>
               )}
