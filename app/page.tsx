@@ -244,6 +244,7 @@ export default function Home() {
     [round, Q] = useState<ReturnType<typeof drawRound> | null>(null),
     [sound, M] = useState(false),
     [secret, E] = useState(""),
+    [logoTaps, L] = useState(0),
     [help, H] = useState(false),
     [eggs, A] = useState(0),
     [bowlIndex, setBowlIndex] = useState<number | null>(null),
@@ -371,12 +372,27 @@ export default function Home() {
   return (
     <main>
       <header>
-        <Link className="brand" href="/">
+        <Link
+          className="brand"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            const taps = logoTaps + 1;
+            L(taps === 3 ? 0 : taps);
+            if (taps === 3)
+              E("Kuru kuru means round and round. Chef says every great bowl deserves another lap.");
+          }}
+          aria-label="Ramen Time secret logo"
+        >
           <span className="brand-mark">≋</span> RAMEN TIME<sup>®</sup>
         </Link>
-        <div className="location">
+        <button
+          className="location"
+          type="button"
+          onClick={() => E("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.")}
+        >
           <i /> WORCESTER, MA <span>/</span> OPEN LATE
-        </div>
+        </button>
         <button
           className="sound"
           aria-pressed={sound}
@@ -399,13 +415,18 @@ export default function Home() {
             <br className="mobile" /> Leave it all on the counter.
           </p>
         </div>
-        <div className="stamp">
+        <button
+          className="stamp"
+          type="button"
+          onClick={() => E("The 508 is home base: a little city, a big heart, and a bowl worth talking about.")}
+          aria-label="Reveal the 508 ramen secret"
+        >
           MADE WITH
           <br />
           <strong>SOUL</strong>
           <br />
           IN THE 508<span>✦</span>
-        </div>
+        </button>
       </section>
       <nav className="steps" aria-label="Game progress">
         {[
