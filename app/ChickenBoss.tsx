@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { BOSS_HITS, FLIGHT_SECONDS, chickenX, eggHitsChicken, scoreEgg } from './chicken-rules.mjs';
+import { BOSS_HITS, FIERY_BOSS_HITS, FLIGHT_SECONDS, chickenX, eggHitsChicken, scoreEgg } from './chicken-rules.mjs';
 
 type Shot = { x: number; y: number; started: number };
 
-export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onThrow: () => void }) {
+export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWin: () => void; onThrow: () => void; isOnFire?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const win = useRef(onWin);
   const sound = useRef(onThrow);
   const game = useRef({ time: 0, hits: 0, aim: 320, shot: null as Shot | null, flash: 0, hit: false, done: false });
+  const targetHits = isOnFire ? FIERY_BOSS_HITS : BOSS_HITS;
   const [hits, setHits] = useState(0);
   const [feedback, setFeedback] = useState('A wild chicken escaped onto Shrewsbury Street!');
 
@@ -37,12 +38,12 @@ export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onT
       previous = now;
       if (g.shot && g.time - g.shot.started >= FLIGHT_SECONDS) {
         g.hit = eggHitsChicken(g.shot.x, g.shot.y, g.time);
-        g.hits = scoreEgg(g.hits, g.hit);
+        g.hits = scoreEgg(g.hits, g.hit, targetHits);
         g.flash = g.time + 0.3;
         g.shot = null;
         setHits(g.hits);
-        setFeedback(g.hit ? `${g.hits} of 3 hits! ${g.hits === 3 ? 'ABSOLUTE GOAT. Order complete!' : 'Direct yolk!'}` : 'Miss! Lead the chicken a little. Unlimited eggs, keep throwing.');
-        if (g.hits === BOSS_HITS) { g.done = true; win.current(); return; }
+        setFeedback(g.hit ? `${g.hits} of ${targetHits} hits! ${g.hits === targetHits ? 'ABSOLUTE GOAT. Order complete!' : 'Direct yolk!'}` : 'Miss! Lead the chicken a little. Unlimited eggs, keep throwing.');
+        if (g.hits === targetHits) { g.done = true; win.current(); return; }
       }
       rect(0, 0, 640, 350, '#202c26');
       for (let x = 0; x < 640; x += 48) {
@@ -59,7 +60,7 @@ export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onT
       rect(x - 27, 174, 59, 6, '#34392a');
       rect(x - 22 + stride, 165, 7, 12, '#e6a04d');
       rect(x + 13 - stride, 165, 7, 12, '#e6a04d');
-      const feather = g.flash > g.time && g.hit ? '#f4bb4b' : '#eee1b5';
+      const feather = isOnFire ? '#e35b35' : g.flash > g.time && g.hit ? '#f4bb4b' : '#eee1b5';
       rect(x - 29, 129, 49, 34, feather);
       rect(x - 36, 118, 12, 30, feather);
       rect(x - 44, 111, 10, 22, '#bcae83');
@@ -84,13 +85,14 @@ export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onT
       rect(285, 321, 70, 29, '#bc8e61');
       rect(300, 307, 38, 22, '#dfb07d');
       text('508 EGG PATROL', 18, 326, 11);
-      text(`${g.hits}/3 HITS`, 543, 326, 12);
+      text(`${g.hits}/${targetHits} HITS`, 543, 326, 12);
+      if (isOnFire) text('HOT SAUCE CHICKEN', 245, 58, 12, '#ffb347');
       frame = requestAnimationFrame(animate);
     }
     frame = requestAnimationFrame(animate);
     canvas.current?.focus();
     return () => { active = false; cancelAnimationFrame(frame); };
-  }, []);
+  }, [isOnFire, targetHits]);
 
   function throwEgg(x = game.current.aim, y = 145) {
     const g = game.current;
@@ -102,7 +104,7 @@ export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onT
 
   return <div className="boss-game">
     <canvas ref={canvas} width={640} height={350} tabIndex={0} role="button" aria-roledescription="egg-toss game"
-      aria-label="Wild chicken egg toss. Click or tap ahead of the moving chicken to throw. Keyboard: left and right arrows aim, Space or Enter throws. Hit three times."
+      aria-label={`Wild chicken egg toss${isOnFire ? ' with hot sauce on fire' : ''}. Click or tap ahead of the moving chicken to throw. Keyboard: left and right arrows aim, Space or Enter throws. Hit ${targetHits} times.`}
       onPointerDown={event => {
         const bounds = event.currentTarget.getBoundingClientRect();
         event.currentTarget.focus({ preventScroll: true });
@@ -114,7 +116,7 @@ export default function ChickenBoss({ onWin, onThrow }: { onWin: () => void; onT
         if (event.key === 'ArrowRight') game.current.aim = Math.min(605, game.current.aim + 18);
         if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) throwEgg();
       }} />
-    <div className="boss-score"><span aria-label={`${hits} of 3 hits`}>{'◒'.repeat(hits)}{'○'.repeat(3 - hits)}</span><p role="status">{feedback}</p></div>
+    <div className="boss-score"><span aria-label={`${hits} of ${targetHits} hits`}>{'◒'.repeat(hits)}{'○'.repeat(targetHits - hits)}</span><p role="status">{feedback}</p></div>
     <p className="tiny boss-controls">TAP TO AIM & THROW · ← → + SPACE ON KEYBOARD · UNLIMITED EGGS</p>
   </div>;
 }
