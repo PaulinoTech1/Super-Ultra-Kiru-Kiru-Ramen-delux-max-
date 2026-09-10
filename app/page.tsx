@@ -26,11 +26,15 @@ function Shop({
   eggs,
   bowlIndex,
   sleepy,
+  knockedBottles,
+  onBottleKnock,
 }: {
   toppings: string[];
   eggs: number;
   bowlIndex: number | null;
   sleepy: boolean;
+  knockedBottles: number[];
+  onBottleKnock: (index: number) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -76,14 +80,22 @@ function Shop({
     t("KURU KURU", 292, 51, "#f0c56f", 9);
     t("RAMEN", 282, 70, "#f4d59a", 23);
     t("HOT BOWLS / GOOD SOULS", 280, 89, "#ebc18a", 8);
-    for (const x of [235, 421]) {
-      r(x + 11, 0, 2, 32, "#b18754");
-      r(x + 3, 32, 22, 7, "#734930");
-      r(x, 39, 28, 43, "#d08443");
-      r(x + 4, 39, 20, 43, "#e9a857");
-      r(x + 12, 42, 4, 35, "#c97c40");
-      r(x + 3, 82, 22, 5, "#734930");
+    for (const [i, x] of [235, 421].entries()) {
+      if (knockedBottles.includes(i)) {
+        r(x - 4, 76, 44, 7, "#734930");
+        r(x + 9, 69, 30, 7, "#d08443");
+      } else {
+        r(x + 11, 0, 2, 32, "#b18754");
+        r(x + 3, 32, 22, 7, "#734930");
+        r(x, 39, 28, 43, "#d08443");
+        r(x + 4, 39, 20, 43, "#e9a857");
+        r(x + 12, 42, 4, 35, "#c97c40");
+        r(x + 3, 82, 22, 5, "#734930");
+      }
     }
+    c.strokeStyle = "#e8c65e";
+    c.strokeRect(230, 0, 38, 88);
+    c.strokeRect(416, 0, 38, 88);
     r(485, 40, 110, 99, "#c2b58e");
     r(491, 46, 98, 87, "#ded0a5");
     t("HOUSE RULES", 499, 61, "#624d37", 9);
@@ -225,14 +237,28 @@ function Shop({
       t("z", 376, 100, "#526247", 12);
       t("z", 387, 95, "#526247", 9);
     }
-  }, [toppings, eggs, bowlIndex, sleepy]);
+  }, [toppings, eggs, bowlIndex, sleepy, knockedBottles]);
   return (
     <canvas
       ref={ref}
+      onClick={(event) => {
+        const canvas = event.currentTarget;
+        const scaleX = 640 / canvas.getBoundingClientRect().width;
+        const x = (event.clientX - canvas.getBoundingClientRect().left) * scaleX;
+        const index = x < 320 ? 0 : 1;
+        if (!knockedBottles.includes(index)) onBottleKnock(index);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          const nextBottle = [0, 1].find((index) => !knockedBottles.includes(index));
+          if (nextBottle !== undefined) onBottleKnock(nextBottle);
+        }
+      }}
+      tabIndex={0}
       width={640}
       height={350}
       role="img"
-      aria-label={`Pixel ramen shop. Chef Kenji, Chief Ramen Officer, is ${sleepy ? "sleeping" : "awake"}. ${bowlIndex === null ? "Unassigned bowl" : BOWLS[bowlIndex].name}. In your bowl: shoyu broth, ${toppings.map((id) => (id === "ajitama" ? `${eggs} ajitama` : id)).join(", ")}`}
+      aria-label={`Pixel ramen shop. Two counter bottles are clickable; ${knockedBottles.length} of 2 knocked over. Press Enter or Space to knock over the next bottle. Chef Kenji, Chief Ramen Officer, is ${sleepy ? "sleeping" : "awake"}. ${bowlIndex === null ? "Unassigned bowl" : BOWLS[bowlIndex].name}. In your bowl: shoyu broth, ${toppings.map((id) => (id === "ajitama" ? `${eggs} ajitama` : id)).join(", ")}`}
     />
   );
 }
@@ -251,7 +277,8 @@ export default function Home() {
     [bowlIndex, setBowlIndex] = useState<number | null>(null),
     [sleepy, setSleepy] = useState(false),
     [fieryChicken, setFieryChicken] = useState(false),
-    [goldenChicken, setGoldenChicken] = useState(false);
+    [goldenChicken, setGoldenChicken] = useState(false),
+    [knockedBottles, setKnockedBottles] = useState<number[]>([]);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -368,6 +395,18 @@ export default function Home() {
     A(eggs - 1);
     if (eggs === 1) U((v) => v.filter((x) => x !== "ajitama"));
   }
+  function knockBottle(index: number) {
+    if (stage !== "build" || knockedBottles.includes(index)) return;
+    beep();
+    const next = [...knockedBottles, index];
+    setKnockedBottles(next);
+    if (next.length === 2) {
+      D(makeDeck());
+      Q(null);
+      E("You knocked over every bottle. Chef Kenji is dealing the cards.");
+      S("duel");
+    }
+  }
   function bossWin() {
     U((v) => (v.includes("noodles") ? v : [...v, "noodles"]));
     E("");
@@ -384,13 +423,20 @@ export default function Home() {
     const result = drawRound(deck);
     D(result.remaining);
     Q(result);
-    if (result.winner !== "tie") S("over");
+    if (result.winner === "player") {
+      E("You win the card duel. Chef Kenji lets you stay on the counter.");
+    } else if (result.winner !== "tie") {
+      E("Chef Kenji wins. You're kicked off the counter. The game is restarting.");
+      S("over");
+      window.setTimeout(reset, 1800);
+    }
   }
   function reset() {
     setBowlIndex(null);
     setSleepy(false);
     setFieryChicken(false);
     setGoldenChicken(false);
+    setKnockedBottles([]);
     A(0);
     U([]);
     R(0);
@@ -535,6 +581,8 @@ export default function Home() {
               eggs={eggs}
               bowlIndex={bowlIndex}
               sleepy={sleepy}
+              knockedBottles={knockedBottles}
+              onBottleKnock={knockBottle}
             />
           )}
           <div className="scene-bottom">
