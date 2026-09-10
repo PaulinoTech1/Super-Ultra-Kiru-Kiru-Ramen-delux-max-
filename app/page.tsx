@@ -249,7 +249,8 @@ export default function Home() {
     [eggs, A] = useState(0),
     [bowlIndex, setBowlIndex] = useState<number | null>(null),
     [sleepy, setSleepy] = useState(false),
-    [fieryChicken, setFieryChicken] = useState(false);
+    [fieryChicken, setFieryChicken] = useState(false),
+    [goldenChicken, setGoldenChicken] = useState(false);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -347,8 +348,14 @@ export default function Home() {
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
     if (needsChickenBoss(next)) {
       const hotSauceTriggered = selected.includes("hot");
-      setFieryChicken(hotSauceTriggered);
-      E(hotSauceTriggered ? "You added hot sauce before the fourth egg. Now the wild chicken is on fire! Four hits to cool it down." : "Sorry, the wild chicken has us on rations.");
+      const allToppingsBeforeEggs = items.filter(([id]) => id !== "ajitama").every(([id]) => selected.includes(id));
+      setGoldenChicken(allToppingsBeforeEggs);
+      setFieryChicken(!allToppingsBeforeEggs && hotSauceTriggered);
+      E(allToppingsBeforeEggs
+        ? "Every topping before the fourth egg?! The golden chicken is here, and it throws electric eggs!"
+        : hotSauceTriggered
+          ? "You added hot sauce before the fourth egg. Now the wild chicken is on fire! Four hits to cool it down."
+          : "Sorry, the wild chicken has us on rations.");
       S("boss-intro");
     }
   }
@@ -380,6 +387,7 @@ export default function Home() {
     setBowlIndex(null);
     setSleepy(false);
     setFieryChicken(false);
+    setGoldenChicken(false);
     A(0);
     U([]);
     R(0);
@@ -397,9 +405,11 @@ export default function Home() {
       : stage === "boss-intro"
         ? "Sorry, the wild chicken has us on rations."
         : stage === "boss"
-          ? fieryChicken
-            ? "Hot sauce before the fourth egg?! The wild chicken is on fire. Four hits. Cool it down!"
-            : "FOUR ajitama?! You've summoned the Shrewsbury Street chicken. Three hits. Save my shop!"
+          ? goldenChicken
+            ? "Every topping before the fourth egg?! The golden chicken fights back with electric eggs. You have six hits."
+            : fieryChicken
+              ? "Hot sauce before the fourth egg?! The wild chicken is on fire. Four hits. Cool it down!"
+              : "FOUR ajitama?! You've summoned the Shrewsbury Street chicken. Three hits. Save my shop!"
           : stage === "goat"
             ? "ABSOLUTE GOAT. Four eggs, three hits, one legend. I finished your noodles. Order up!"
             : stage === "welcome"
@@ -515,7 +525,7 @@ export default function Home() {
             </button>
           </div>
           {stage === "boss" ? (
-            <ChickenBoss onWin={bossWin} onThrow={beep} isOnFire={fieryChicken} />
+            <ChickenBoss onWin={bossWin} onLose={() => { E("Looks like you need more ramen! You're cooked buddy!"); S("over"); }} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
           ) : (
             <Shop
               toppings={selected}
