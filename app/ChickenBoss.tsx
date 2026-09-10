@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { BOSS_HITS, FIERY_BOSS_HITS, FLIGHT_SECONDS, chickenX, eggHitsChicken, scoreEgg } from './chicken-rules.mjs';
+import { BOSS_HITS, FIERY_BOSS_HITS, GOLDEN_BOSS_HITS, GOLDEN_PLAYER_HITS, GOLDEN_HEALTH_BOWLS, FLIGHT_SECONDS, chickenX, eggHitsChicken, scoreEgg } from './chicken-rules.mjs';
 
 type Shot = { x: number; y: number; started: number };
 
-export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWin: () => void; onThrow: () => void; isOnFire?: boolean }) {
+export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, isGolden = false }: { onWin: () => void; onLose?: () => void; onThrow: () => void; isOnFire?: boolean; isGolden?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const win = useRef(onWin);
   const sound = useRef(onThrow);
-  const game = useRef({ time: 0, hits: 0, aim: 320, shot: null as Shot | null, flash: 0, hit: false, done: false });
-  const targetHits = isOnFire ? FIERY_BOSS_HITS : BOSS_HITS;
+  const lose = useRef(onLose);
+  const game = useRef({ time: 0, hits: 0, playerHits: 0, aim: 320, shot: null as Shot | null, enemyEgg: null as { started: number; x: number } | null, flash: 0, hit: false, done: false });
+  const targetHits = isGolden ? GOLDEN_BOSS_HITS : isOnFire ? FIERY_BOSS_HITS : BOSS_HITS;
   const [hits, setHits] = useState(0);
-  const [feedback, setFeedback] = useState('A wild chicken escaped onto Shrewsbury Street!');
+  const [playerHits, setPlayerHits] = useState(0);
+  const [feedback, setFeedback] = useState(isGolden ? 'The golden chicken fights back with electric eggs!' : 'A wild chicken escaped onto Shrewsbury Street!');
 
-  useEffect(() => { win.current = onWin; sound.current = onThrow; }, [onWin, onThrow]);
+  useEffect(() => { win.current = onWin; lose.current = onLose; sound.current = onThrow; }, [onWin, onLose, onThrow]);
   useEffect(() => {
     const context = canvas.current?.getContext('2d');
     if (!context) return;
@@ -36,6 +38,14 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
       // Clamp elapsed time so background tabs cannot produce surprise shots or hits.
       g.time += previous ? Math.min((now - previous) / 1000, 0.05) : 0;
       previous = now;
+      if (isGolden && !g.enemyEgg && Math.floor(g.time) > 0 && Math.floor(g.time * 2) % 7 === 0) g.enemyEgg = { started: g.time, x: chickenX(g.time) };
+      if (isGolden && g.enemyEgg && g.time - g.enemyEgg.started >= 0.75) {
+        g.playerHits += 1;
+        setPlayerHits(g.playerHits);
+        g.enemyEgg = null;
+        setFeedback(g.playerHits >= GOLDEN_PLAYER_HITS ? "Looks like you need more ramen! You're cooked buddy!" : `Electric egg hit! ${GOLDEN_PLAYER_HITS - g.playerHits} hits left.`);
+        if (g.playerHits >= GOLDEN_PLAYER_HITS) { g.done = true; lose.current?.(); return; }
+      }
       if (g.shot && g.time - g.shot.started >= FLIGHT_SECONDS) {
         g.hit = eggHitsChicken(g.shot.x, g.shot.y, g.time);
         g.hits = scoreEgg(g.hits, g.hit, targetHits);
@@ -60,7 +70,7 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
       rect(x - 27, 174, 59, 6, '#34392a');
       rect(x - 22 + stride, 165, 7, 12, '#e6a04d');
       rect(x + 13 - stride, 165, 7, 12, '#e6a04d');
-      const feather = isOnFire ? '#e35b35' : g.flash > g.time && g.hit ? '#f4bb4b' : '#eee1b5';
+      const feather = isGolden ? '#f3c94f' : isOnFire ? '#e35b35' : g.flash > g.time && g.hit ? '#f4bb4b' : '#eee1b5';
       rect(x - 29, 129, 49, 34, feather);
       rect(x - 36, 118, 12, 30, feather);
       rect(x - 44, 111, 10, 22, '#bcae83');
@@ -74,6 +84,14 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
       // Fixed throwing position and an aim reticle; shots travel before collision.
       rect(g.aim - 13, 144, 26, 2, '#e5b271');
       rect(g.aim - 1, 133, 2, 26, '#e5b271');
+      if (isGolden && g.enemyEgg) {
+        const p = Math.min(1, (g.time - g.enemyEgg.started) / 0.75);
+        const ex = chickenX(g.enemyEgg.started) + (320 - chickenX(g.enemyEgg.started)) * p;
+        const ey = 120 + 194 * p;
+        rect(ex - 7, ey - 7, 14, 14, '#f3c94f');
+        rect(ex - 3, ey - 12, 6, 24, '#8ee7ff');
+        rect(ex - 12, ey - 3, 24, 6, '#8ee7ff');
+      }
       if (g.shot) {
         const p = Math.min(1, (g.time - g.shot.started) / FLIGHT_SECONDS);
         const ex = 320 + (g.shot.x - 320) * p;
@@ -86,13 +104,17 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
       rect(300, 307, 38, 22, '#dfb07d');
       text('508 EGG PATROL', 18, 326, 11);
       text(`${g.hits}/${targetHits} HITS`, 543, 326, 12);
+      if (isGolden) {
+        text('GOLDEN CHICKEN', 245, 58, 12, '#f3c94f');
+        text(`RAMEN HEALTH ${GOLDEN_HEALTH_BOWLS - Math.ceil(g.playerHits / 2)}/${GOLDEN_HEALTH_BOWLS}`, 18, 347, 10, '#f3c94f');
+      }
       if (isOnFire) text('HOT SAUCE CHICKEN', 245, 58, 12, '#ffb347');
       frame = requestAnimationFrame(animate);
     }
     frame = requestAnimationFrame(animate);
     canvas.current?.focus();
     return () => { active = false; cancelAnimationFrame(frame); };
-  }, [isOnFire, targetHits]);
+  }, [isGolden, isOnFire, targetHits]);
 
   function throwEgg(x = game.current.aim, y = 145) {
     const g = game.current;
@@ -104,7 +126,7 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
 
   return <div className="boss-game">
     <canvas ref={canvas} width={640} height={350} tabIndex={0} role="button" aria-roledescription="egg-toss game"
-      aria-label={`Wild chicken egg toss${isOnFire ? ' with hot sauce on fire' : ''}. Click or tap ahead of the moving chicken to throw. Keyboard: left and right arrows aim, Space or Enter throws. Hit ${targetHits} times.`}
+      aria-label={`${isGolden ? 'Golden chicken electric egg battle' : 'Wild chicken egg toss'}${isOnFire ? ' with hot sauce on fire' : ''}. Click or tap ahead of the moving chicken to throw. Keyboard: left and right arrows aim, Space or Enter throws. Hit ${targetHits} times. ${isGolden ? `${GOLDEN_PLAYER_HITS} incoming hits defeat you.` : ''}`}
       onPointerDown={event => {
         const bounds = event.currentTarget.getBoundingClientRect();
         event.currentTarget.focus({ preventScroll: true });
@@ -116,7 +138,11 @@ export default function ChickenBoss({ onWin, onThrow, isOnFire = false }: { onWi
         if (event.key === 'ArrowRight') game.current.aim = Math.min(605, game.current.aim + 18);
         if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) throwEgg();
       }} />
-    <div className="boss-score"><span aria-label={`${hits} of ${targetHits} hits`}>{'◒'.repeat(hits)}{'○'.repeat(targetHits - hits)}</span><p role="status">{feedback}</p></div>
+    <div className="boss-score">
+      <span aria-label={`${hits} of ${targetHits} hits`}>{'◒'.repeat(hits)}{'○'.repeat(targetHits - hits)}</span>
+      {isGolden && <span aria-label={`${GOLDEN_HEALTH_BOWLS - Math.ceil(playerHits / 2)} of ${GOLDEN_HEALTH_BOWLS} ramen bowls health`}> {Array.from({ length: GOLDEN_HEALTH_BOWLS }, (_, index) => index < GOLDEN_HEALTH_BOWLS - Math.ceil(playerHits / 2) ? '◉' : '○').join('')} HEALTH</span>}
+      <p role="status">{feedback}</p>
+    </div>
     <p className="tiny boss-controls">TAP TO AIM & THROW · ← → + SPACE ON KEYBOARD · UNLIMITED EGGS</p>
   </div>;
 }

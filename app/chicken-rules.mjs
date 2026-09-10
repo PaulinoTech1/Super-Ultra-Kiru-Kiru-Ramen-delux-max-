@@ -1,5 +1,8 @@
 export const BOSS_HITS = 3;
 export const FIERY_BOSS_HITS = 4;
+export const GOLDEN_BOSS_HITS = 3;
+export const GOLDEN_PLAYER_HITS = 6;
+export const GOLDEN_HEALTH_BOWLS = 3;
 export const MAX_AJITAMA = 4;
 export function addAjitama(eggs) { return Math.min(MAX_AJITAMA, eggs + 1); }
 export function ajitamaPositions(eggs) {
