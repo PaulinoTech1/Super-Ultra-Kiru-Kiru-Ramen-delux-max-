@@ -78,7 +78,10 @@
   .cravings button { min-height: 58px; padding: 12px 10px; font-size: 10px; line-height: 1.35; }
   .primary { min-height: 50px; padding: 15px 13px; }
   .bowl-collection { gap: 6px; margin: 16px 0; }
-  .bowl-collection li { min-width: 0; padding: 9px 6px; font-size: 7px; }
+  .bowl-collection li { min-width: 0; padding: 0; font-size: 7px; }
+  .bowl-choice { min-height: 44px; padding: 9px 6px; }
+  .bowl-actions { flex-direction: column; }
+  .secondary { min-height: 48px; }
   .egg-stepper button { min-height: 44px; }
   .boss-score { align-items: flex-start; gap: 9px; padding: 10px; }
   .boss-score > span { font-size: 20px; letter-spacing: 2px; }

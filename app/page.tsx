@@ -351,9 +351,16 @@ export default function Home() {
     };
   }, [sound]);
   function roll() {
-    if (!canPlay || bowlIndex !== null) return;
+    if (!canPlay) return;
     beep();
     setBowlIndex(rollBowl());
+  }
+
+  function chooseBowl(index: number) {
+    if (!canPlay || stage !== "roll") return;
+    beep();
+    setBowlIndex(index);
+    E(`You chose the ${BOWLS[index].name}. Chef Kenji respects a decisive order.`);
   }
 
   function confirmBowl() {
@@ -674,9 +681,10 @@ export default function Home() {
         <div className="panel">
           {stage === "roll" ? (
             <BowlRoll
-              value={bowlIndex}
-              onRoll={roll}
-              onContinue={confirmBowl}
+  value={bowlIndex}
+  onRoll={roll}
+  onChoose={chooseBowl}
+  onContinue={confirmBowl}
             />
           ) : stage === "welcome" ? (
             <>
