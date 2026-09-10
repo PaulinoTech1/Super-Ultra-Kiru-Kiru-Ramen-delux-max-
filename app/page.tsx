@@ -5,6 +5,7 @@ import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
 import { BOWLS, rollBowl, thirdStep, watchChefIdle } from "./kitchen-rules.mjs";
+import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
   needsChickenBoss,
   MAX_AJITAMA,
@@ -279,9 +280,21 @@ export default function Home() {
     [fieryChicken, setFieryChicken] = useState(false),
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
-    [duelLoss, setDuelLoss] = useState(false);
+    [duelLoss, setDuelLoss] = useState(false),
+    [discoveries, setDiscoveries] = useState<string[]>(() => loadDiscoveries()),
+    [specialSign] = useState(() => specialSigns[Math.floor(Math.random() * specialSigns.length)]);
+  const previousSleepy = useRef(false);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    saveDiscoveries(discoveries);
+  }, [discoveries]);
+  function discover(id: string) {
+    setDiscoveries((current) => current.includes(id) ? current : [...current, id]);
+  }
+  useEffect(() => {
+    previousSleepy.current = sleepy;
+  }, [sleepy]);
   useEffect(() => {
     const idle = watchChefIdle(setSleepy);
     const events = [
@@ -344,6 +357,13 @@ export default function Home() {
     setBowlIndex(rollBowl());
   }
 
+  function confirmBowl() {
+    if (bowlIndex !== null) {
+      E(bowlGreetings[BOWLS[bowlIndex].name] || "A bowl with excellent instincts.");
+    }
+    S("welcome");
+  }
+
   function beep() {
     if (!sound) return;
     const a = new AudioContext(),
@@ -360,14 +380,35 @@ export default function Home() {
       void a.close();
     };
   }
+  function wakeChef() {
+    if (sleepy) {
+      discover("wake");
+      if (stage === "build") E("I was inspecting the inside of my eyelids.");
+      setSleepy(false);
+    }
+  }
   function choose(ramen: boolean) {
     beep();
     if (ramen) S("build");
-    else R((v) => Math.min(5, v + 1));
+    else {
+      const kind = refusals % 2 === 0 ? "pizza" : "burger";
+      E(refusalDialogue[kind][Math.min(refusals, refusalDialogue[kind].length - 1)]);
+      R((v) => Math.min(5, v + 1));
+      if (refusals >= 4) discover("patience");
+    }
   }
   function toggle(id: string) {
     beep();
-    U((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
+    const removing = selected.includes(id);
+    const next = removing ? selected.filter((x) => x !== id) : [...selected, id];
+    U(next);
+    if (id === "hot" && !removing && selected.includes("corn")) E("Sunshine with consequences.");
+    else if (id === "hot" && !removing) E(ingredientReactions.hot.add);
+    else if (id === "noodles" && removing) E("We were so close to making ramen.");
+    else if (id === "corn" && !removing) E(ingredientReactions.corn.add);
+    else if (id === "hot" && removing) E(ingredientReactions.hot.remove);
+    else if (ingredientReactions[id as keyof typeof ingredientReactions]) E(ingredientReactions[id as keyof typeof ingredientReactions][removing ? "remove" : "add"]);
+    if (next.includes("corn") && next.includes("hot")) discover("sweet-heat");
   }
   function addEgg() {
     if (stage !== "build" || eggs >= MAX_AJITAMA) return;
@@ -375,6 +416,9 @@ export default function Home() {
     const next = addAjitama(eggs);
     A(next);
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
+    if (next === 1) E("An excellent decision.");
+    else if (next === 2) E("A person of ambition.");
+    else if (next === 3) E("Is this still ramen, or an eggsistential crisis?");
     if (needsChickenBoss(next)) {
       const hotSauceTriggered = selected.includes("hot");
       const allToppingsBeforeEggs = items
@@ -402,6 +446,7 @@ export default function Home() {
     const next = [...knockedBottles, index];
     setKnockedBottles(next);
     if (next.length === 2) {
+      discover("bottles");
       D(makeDeck());
       Q(null);
       E("You knocked over every bottle. Chef Kenji is dealing the cards.");
@@ -486,8 +531,10 @@ export default function Home() {
             event.preventDefault();
             const taps = logoTaps + 1;
             L(taps === 3 ? 0 : taps);
-            if (taps === 3)
+            if (taps === 3) {
+              discover("logo");
               E("Kuru kuru means round and round. Chef says every great bowl deserves another lap.");
+            }
           }}
           aria-label="Ramen Time secret logo"
         >
@@ -525,7 +572,7 @@ export default function Home() {
         <button
           className="stamp"
           type="button"
-          onClick={() => E("The 508 is home base: a little city, a big heart, and a bowl worth talking about.")}
+          onClick={() => { discover("sign"); E("The 508 is home base: a little city, a big heart, and a bowl worth talking about."); }}
           aria-label="Reveal the 508 ramen secret"
         >
           MADE WITH
@@ -588,7 +635,7 @@ export default function Home() {
             />
           )}
           <div className="scene-bottom">
-            <span>✦ A SMALL SHOP IN A BIG-HEARTED CITY.</span>
+            <span>✦ {specialSign}</span>
             <button
               onClick={() =>
                 E(
@@ -608,6 +655,7 @@ export default function Home() {
                 CHEF KENJI <span className="muted">/ CHIEF RAMEN OFFICER</span>
               </p>
               <p>“{secret || message}”</p>
+              {sleepy && <button className="text-button" onClick={wakeChef}>Wake Chef Kenji →</button>}
               {secret && (
                 <button className="text-button" onClick={() => E("")}>
                   Back to the counter →
@@ -624,7 +672,7 @@ export default function Home() {
             <BowlRoll
               value={bowlIndex}
               onRoll={roll}
-              onContinue={() => S("welcome")}
+              onContinue={confirmBowl}
             />
           ) : stage === "welcome" ? (
             <>
@@ -685,6 +733,7 @@ export default function Home() {
                   <h2>Build your bowl.</h2>
                   <p className="assigned-bowl">
                     {bowlIndex !== null ? BOWLS[bowlIndex].name : ""}
+                    <br /><small>{bowlNickname(selected, items.map(([id]) => id))}</small>
                   </p>
                 </div>
                 <span className="count">{selected.length}/8</span>
@@ -854,8 +903,9 @@ export default function Home() {
                 <span>WORCESTER EGG PATROL / 508</span>
               </div>
               <h2>Order complete.</h2>
+              <p className="eyebrow orange">{orderTitle(selected, knockedBottles, eggs)[0]}</p>
               <p className="description">
-                Four ajitama. Three direct hits. One legendary bowl. The chicken
+                {orderTitle(selected, knockedBottles, eggs)[1]} Four ajitama. Three direct hits. One legendary bowl. The chicken
                 retreats and Chef finishes your order on the house.
               </p>
               <div className="result" role="status">
@@ -963,6 +1013,16 @@ export default function Home() {
           )}
         </div>
       </section>
+      <details className="discoveries">
+        <summary>DISCOVERY LOG ({discoveries.length}/{discoveryDefinitions.length})</summary>
+        <div>
+          {discoveryDefinitions.map(([id, label, hint]) => (
+            <button key={id} type="button" onClick={() => !discoveries.includes(id) && E(hint)}>
+              <span>{discoveries.includes(id) ? "✓" : "???"}</span> {discoveries.includes(id) ? label : "Undiscovered"}
+            </button>
+          ))}
+        </div>
+      </details>
       <footer>
         <span>© RAMEN TIME / SLURP LOCAL.</span>
         <button onClick={() => H(!help)} aria-expanded={help}>
