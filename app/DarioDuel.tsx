@@ -5,6 +5,7 @@ import {
   COOKOFF_WINS_NEEDED,
   DARIO_STUN_MS,
   FIRE_EGG_COOLDOWN_MS,
+  FIRE_EGG_FLIGHT_MS,
   ROUND_END_MS,
   darioIntervalMs,
   darioIsDone,
@@ -43,6 +44,11 @@ const KENJI_CORNER = [
   "That's my student! Keep the pressure on!",
   "Fire eggs! Where did you learn that?! Beautiful!",
 ];
+const ROUND_HYPE = [
+  "Dario cracks his knuckles. The crowd leans in.",
+  "Dario speeds up. Someone's nonna is taking bets.",
+  "FULL TILT. No mercy. No survivors. Just ramen.",
+];
 
 function pickTaunt(lines: string[], rand = Math.random) {
   return lines[Math.floor(rand() * lines.length)];
@@ -78,8 +84,23 @@ export default function DarioDuel({
   const [cornerNote, setCornerNote] = useState("");
   const [roundResult, setRoundResult] = useState<"player" | "dario" | null>(null);
   const [hitFlash, setHitFlash] = useState(false);
+  const [eggFlying, setEggFlying] = useState(false);
+  const [arenaShake, setArenaShake] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const roundOver = useRef(false);
+  const phaseRef = useRef<Phase>("intro");
+  const flightTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  // Clear a mid-flight egg if the duel unmounts.
+  useEffect(() => {
+    return () => {
+      if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
+    };
+  }, []);
 
   // Clock for cooldown / stun indicators.
   useEffect(() => {
@@ -130,6 +151,8 @@ export default function DarioDuel({
         setCooldownUntil(0);
         setRoundResult(null);
         setCornerNote("");
+        setEggFlying(false);
+        setArenaShake(false);
         roundOver.current = false;
         setPhase("roundIntro");
       }
@@ -162,11 +185,24 @@ export default function DarioDuel({
     if (phase !== "cook" || Date.now() < cooldownUntil) return;
     onThrow();
     setCooldownUntil(Date.now() + FIRE_EGG_COOLDOWN_MS);
+    setEggFlying(true);
+    if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
+    flightTimer.current = window.setTimeout(eggImpact, FIRE_EGG_FLIGHT_MS);
+  }
+
+  // The egg lands 650ms after the throw. If the round ended mid-flight,
+  // the egg just fizzles out.
+  function eggImpact() {
+    flightTimer.current = null;
+    setEggFlying(false);
+    if (phaseRef.current !== "cook") return;
     setStunnedUntil(Date.now() + DARIO_STUN_MS);
     setDarioToppings((prev) => fireEggKnockoff(prev));
     setTaunt(pickTaunt(DARIO_STUNNED_TAUNTS));
     setHitFlash(true);
+    setArenaShake(true);
     window.setTimeout(() => setHitFlash(false), 700);
+    window.setTimeout(() => setArenaShake(false), 450);
   }
 
   function rematch() {
@@ -182,6 +218,8 @@ export default function DarioDuel({
     setCooldownUntil(0);
     setRoundResult(null);
     setCornerNote("");
+    setEggFlying(false);
+    setArenaShake(false);
     setTaunt("So. The egg-thrower wants a REAL challenge.");
     roundOver.current = false;
     setPhase("roundIntro");
@@ -195,12 +233,32 @@ export default function DarioDuel({
 
   return (
     <div className="cookoff">
-      <p className="eyebrow orange">ACROSS THE COUNTER</p>
-      <h2>Chef Dario&apos;s Cookoff</h2>
-      <p className="cookoff-score" aria-live="polite">
-        YOU {playerWins} — {darioWins} DARIO
-        <small> first to {COOKOFF_WINS_NEEDED}</small>
-      </p>
+      {phase === "intro" ? (
+        <div className="boss-banner">
+          <p className="boss-warning">⚠ BOSS BATTLE ⚠</p>
+          <h2 className="boss-name-huge">CHEF DARIO</h2>
+          <p className="boss-title">Self-proclaimed Market King of the Worcester Public Market</p>
+        </div>
+      ) : (
+        <>
+          <p className="eyebrow orange">ACROSS THE COUNTER</p>
+          <h2>Chef Dario&apos;s Cookoff</h2>
+        </>
+      )}
+      <div className="boss-bars" role="status" aria-label={`You have ${playerWins} round wins, Dario has ${darioWins}. First to ${COOKOFF_WINS_NEEDED} wins.`}>
+        <div className="boss-bar you">
+          <span className="boss-tag">YOU</span>
+          {Array.from({ length: COOKOFF_WINS_NEEDED }).map((_, i) => (
+            <span key={i} className={i < playerWins ? "seg on" : "seg"} />
+          ))}
+        </div>
+        <div className="boss-bar foe">
+          <span className="boss-tag">DARIO</span>
+          {Array.from({ length: COOKOFF_WINS_NEEDED }).map((_, i) => (
+            <span key={i} className={i < darioWins ? "seg on" : "seg"} />
+          ))}
+        </div>
+      </div>
 
       {phase === "intro" && (
         <>
@@ -233,7 +291,7 @@ export default function DarioDuel({
               {orderToppingNames.join(" · ")}
               {order.eggs > 0 && ` · ${order.eggs} ajitama`}
             </p>
-            <small>Dario gets faster every round. Build it before he does.</small>
+            <small>{ROUND_HYPE[roundIndex] ?? "Dario gets faster every round. Build it before he does."}</small>
           </div>
           <button className="primary" type="button" onClick={() => setPhase("cook")}>
             START COOKING <span>→</span>
@@ -242,8 +300,15 @@ export default function DarioDuel({
       )}
 
       {(phase === "cook" || phase === "roundEnd") && (
-        <>
+        <div className={`cookoff-arena${arenaShake ? " shake" : ""}`}>
+          {eggFlying && (
+            <div className="fire-egg-projectile" aria-hidden="true">
+              <span className="egg-trail">🔥</span>
+              <span className="egg-body">🥚</span>
+            </div>
+          )}
           <div className={`dario-panel${stunned ? " stunned" : ""}${hitFlash ? " hit" : ""}`}>
+            {hitFlash && <div className="impact-burst" aria-hidden="true">💥</div>}
             <p className="eyebrow orange">DARIO&apos;S COUNTER</p>
             <div className="dario-progress" aria-label={`Dario has placed ${darioToppings.length} of ${order.toppings.length} toppings`}>
               {order.toppings.map((id) => {
@@ -270,6 +335,19 @@ export default function DarioDuel({
 
           {phase === "cook" ? (
             <>
+              <div className="player-bowl" aria-hidden="true">
+                <span className="bowl-label">YOUR BOWL</span>
+                <span className="bowl-emoji">🍜</span>
+                <span className="bowl-contents">
+                  {playerSelected.map((id) => {
+                    const item = itemById(items, id);
+                    return (
+                      <span key={id} style={{ color: item?.[4] }}>{item?.[3] ?? "?"}</span>
+                    );
+                  })}
+                  {"🥚".repeat(playerEggs)}
+                </span>
+              </div>
               <div className="ingredients cookoff-ingredients">
                 {items
                   .filter(([id]) => id !== "ajitama")
@@ -313,7 +391,7 @@ export default function DarioDuel({
           {cornerNote && (
             <p className="tiny corner-note" role="note">Kenji, from your corner: &ldquo;{cornerNote}&rdquo;</p>
           )}
-        </>
+        </div>
       )}
 
       {phase === "duelEnd" && (

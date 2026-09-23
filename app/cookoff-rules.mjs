@@ -5,6 +5,7 @@
 export const COOKOFF_WINS_NEEDED = 2; // best of 3
 export const DARIO_STUN_MS = 3000;
 export const FIRE_EGG_COOLDOWN_MS = 4000;
+export const FIRE_EGG_FLIGHT_MS = 650; // visible egg flight before impact
 export const ROUND_END_MS = 2200;
 
 // Ticket orders. Topping ids match the build-screen ingredient list.

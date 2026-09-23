@@ -64,3 +64,32 @@
 .linklike{color:var(--orange);font-size:9px;letter-spacing:.6px;text-decoration:underline;padding:0}
 @media(max-width:680px){.cookoff-actions{flex-direction:column}.dario-progress{font-size:22px}}
 @media(prefers-reduced-motion:reduce){.flyer-btn,.fire-egg-btn,.dario-panel.hit,.stun-flag{animation:none}}
+/* Boss battle presentation */
+.boss-banner{text-align:center;padding:26px 12px 20px;margin-bottom:18px;border:2px solid #c14e2a;background:radial-gradient(ellipse at center,#3a1408 0%,#1c0a04 70%);animation:boss-pulse 2.2s ease-in-out infinite}
+.boss-warning{color:#ffb347;font-weight:900;letter-spacing:6px;font-size:13px;margin:0 0 8px}
+.boss-name-huge{font-size:44px;letter-spacing:4px;color:#ff5a3c;text-shadow:0 0 18px rgba(255,90,60,.55),0 3px 0 #5e1f0e;margin:0 0 6px}
+.boss-title{color:#e8c9a0;font-style:italic;font-size:11px;margin:0}
+@keyframes boss-pulse{0%,100%{box-shadow:0 0 0 rgba(255,90,60,0)}50%{box-shadow:0 0 26px rgba(255,90,60,.35)}}
+.boss-bars{display:flex;gap:16px;justify-content:center;align-items:center;margin:10px 0 18px;flex-wrap:wrap}
+.boss-bar{display:flex;gap:5px;align-items:center}
+.boss-tag{font-size:10px;font-weight:900;letter-spacing:2px;color:#c9b8a3;margin-right:4px}
+.boss-bar .seg{width:36px;height:12px;border:1px solid var(--line);border-radius:3px;background:#241a12}
+.boss-bar.you .seg.on{background:#7fd08a;box-shadow:0 0 8px rgba(127,208,138,.6)}
+.boss-bar.foe .seg.on{background:#ff5a3c;box-shadow:0 0 8px rgba(255,90,60,.6)}
+.cookoff-arena{position:relative}
+.cookoff-arena.shake{animation:arena-shake .45s linear}
+@keyframes arena-shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-7px,3px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,3px)}}
+.dario-panel{position:relative}
+.impact-burst{position:absolute;top:6px;right:10px;font-size:40px;animation:burst-pop .7s ease-out;pointer-events:none}
+@keyframes burst-pop{0%{transform:scale(.3) rotate(-20deg);opacity:0}30%{transform:scale(1.5) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:.9}}
+.fire-egg-projectile{position:absolute;left:50%;bottom:12%;z-index:5;pointer-events:none;animation:egg-rise .65s cubic-bezier(.3,.6,.4,1) forwards}
+.egg-body{font-size:34px;display:inline-block;filter:drop-shadow(0 0 10px #ffb347) drop-shadow(0 0 22px #ff5a3c);animation:egg-spin .65s linear}
+.egg-trail{font-size:22px;display:inline-block;margin-right:-14px;filter:blur(1px);animation:trail-flicker .12s steps(2,end) infinite}
+@keyframes egg-rise{0%{bottom:12%;margin-left:-70px;opacity:0}12%{opacity:1}45%{margin-left:70px}70%{margin-left:-30px}100%{bottom:80%;margin-left:-14px;opacity:1}}
+@keyframes egg-spin{from{transform:rotate(0)}to{transform:rotate(340deg)}}
+@keyframes trail-flicker{50%{transform:scale(1.25) rotate(8deg);opacity:.75}}
+.player-bowl{display:flex;align-items:center;gap:10px;justify-content:center;border:1px dashed var(--line);border-radius:10px;padding:8px 12px;margin:0 0 12px;background:rgba(0,0,0,.25)}
+.bowl-label{font-size:9px;font-weight:900;letter-spacing:2px;color:#c9b8a3}
+.bowl-emoji{font-size:30px}
+.bowl-contents{font-size:22px;letter-spacing:2px;min-height:28px}
+@media(prefers-reduced-motion:reduce){.boss-banner,.fire-egg-projectile,.egg-body,.egg-trail,.cookoff-arena.shake,.impact-burst{animation:none}.fire-egg-projectile{opacity:0}}
