@@ -75,6 +75,7 @@ export default function DarioDuel({
   const [stunnedUntil, setStunnedUntil] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [taunt, setTaunt] = useState("So. The egg-thrower wants a REAL challenge.");
+  const [cornerNote, setCornerNote] = useState("");
   const [roundResult, setRoundResult] = useState<"player" | "dario" | null>(null);
   const [hitFlash, setHitFlash] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -128,6 +129,7 @@ export default function DarioDuel({
         setStunnedUntil(0);
         setCooldownUntil(0);
         setRoundResult(null);
+        setCornerNote("");
         roundOver.current = false;
         setPhase("roundIntro");
       }
@@ -137,7 +139,7 @@ export default function DarioDuel({
   // Player completes the ticket.
   useEffect(() => {
     if (phase === "cook" && orderMatches(playerSelected, playerEggs, order)) {
-      setTaunt(pickTaunt(KENJI_CORNER));
+      setCornerNote(pickTaunt(KENJI_CORNER));
       endRound("player");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +181,7 @@ export default function DarioDuel({
     setStunnedUntil(0);
     setCooldownUntil(0);
     setRoundResult(null);
+    setCornerNote("");
     setTaunt("So. The egg-thrower wants a REAL challenge.");
     roundOver.current = false;
     setPhase("roundIntro");
@@ -306,6 +309,9 @@ export default function DarioDuel({
             <div className="result" role="status">
               {roundResult === "player" ? `YOU TAKE ROUND ${roundIndex + 1}!` : `DARIO TAKES ROUND ${roundIndex + 1}.`}
             </div>
+          )}
+          {cornerNote && (
+            <p className="tiny corner-note" role="note">Kenji, from your corner: &ldquo;{cornerNote}&rdquo;</p>
           )}
         </>
       )}

@@ -56,6 +56,7 @@
 .cookoff-ingredients{margin-bottom:12px}
 .cookoff-actions{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
 .cookoff-actions .egg-stepper{width:auto;flex:1;border:1px solid var(--line);padding:6px 8px;margin:0}
+.corner-note{font-style:italic;color:#9db8d6;margin-top:8px}
 .fire-egg-btn{flex:1.4;background:linear-gradient(180deg,#c14e2a,#8f2f16);color:#ffe9c9;font-weight:900;letter-spacing:1px;font-size:11px;padding:12px;border:2px solid #ffb347;box-shadow:0 4px 0 #5e1f0e;animation:fire-flicker 1.1s ease-in-out infinite}
 .fire-egg-btn:hover:not(:disabled){filter:brightness(1.15)}
 .fire-egg-btn.cooling{animation:none;opacity:.45;box-shadow:none}
