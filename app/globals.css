@@ -80,8 +80,12 @@
 .cookoff-arena.shake{animation:arena-shake .45s linear}
 @keyframes arena-shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-7px,3px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,3px)}}
 .dario-panel{position:relative}
-.impact-burst{position:absolute;top:6px;right:10px;font-size:40px;animation:burst-pop .7s ease-out;pointer-events:none}
-@keyframes burst-pop{0%{transform:scale(.3) rotate(-20deg);opacity:0}30%{transform:scale(1.5) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:.9}}
+.nuke{position:absolute;top:2px;right:8px;width:110px;height:110px;pointer-events:none;z-index:6}
+.nuke-core{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#ffffff 0%,#d8f1ff 22%,#38bdf8 52%,rgba(29,78,216,.55) 68%,rgba(29,78,216,0) 78%);animation:nuke-core .7s ease-out forwards}
+.nuke-ring{position:absolute;inset:0;border-radius:50%;border:4px solid #7dd3fc;box-shadow:0 0 18px #38bdf8,inset 0 0 12px rgba(56,189,248,.7);animation:nuke-ring .7s ease-out forwards}
+.nuke-ring.r2{border-color:#38bdf8;animation-delay:.09s}
+@keyframes nuke-core{0%{transform:scale(.15);opacity:0}22%{opacity:1}100%{transform:scale(2.7);opacity:0}}
+@keyframes nuke-ring{0%{transform:scale(.25);opacity:1}100%{transform:scale(3.6);opacity:0}}
 .fire-egg-projectile{position:absolute;left:50%;bottom:12%;z-index:5;pointer-events:none;animation:egg-rise .65s cubic-bezier(.3,.6,.4,1) forwards}
 .egg-body{font-size:34px;display:inline-block;filter:drop-shadow(0 0 10px #ffb347) drop-shadow(0 0 22px #ff5a3c);animation:egg-spin .65s linear}
 .egg-trail{font-size:22px;display:inline-block;margin-right:-14px;filter:blur(1px);animation:trail-flicker .12s steps(2,end) infinite}
@@ -92,4 +96,4 @@
 .bowl-label{font-size:9px;font-weight:900;letter-spacing:2px;color:#c9b8a3}
 .bowl-emoji{font-size:30px}
 .bowl-contents{font-size:22px;letter-spacing:2px;min-height:28px}
-@media(prefers-reduced-motion:reduce){.boss-banner,.fire-egg-projectile,.egg-body,.egg-trail,.cookoff-arena.shake,.impact-burst{animation:none}.fire-egg-projectile{opacity:0}}
+@media(prefers-reduced-motion:reduce){.boss-banner,.fire-egg-projectile,.egg-body,.egg-trail,.cookoff-arena.shake,.nuke-core,.nuke-ring{animation:none}.fire-egg-projectile{opacity:0}}

@@ -308,7 +308,13 @@ export default function DarioDuel({
             </div>
           )}
           <div className={`dario-panel${stunned ? " stunned" : ""}${hitFlash ? " hit" : ""}`}>
-            {hitFlash && <div className="impact-burst" aria-hidden="true">💥</div>}
+            {hitFlash && (
+              <div className="nuke" aria-hidden="true">
+                <div className="nuke-core" />
+                <div className="nuke-ring" />
+                <div className="nuke-ring r2" />
+              </div>
+            )}
             <p className="eyebrow orange">DARIO&apos;S COUNTER</p>
             <div className="dario-progress" aria-label={`Dario has placed ${darioToppings.length} of ${order.toppings.length} toppings`}>
               {order.toppings.map((id) => {
