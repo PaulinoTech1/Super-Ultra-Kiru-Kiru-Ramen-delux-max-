@@ -97,3 +97,55 @@
 .bowl-emoji{font-size:30px}
 .bowl-contents{font-size:22px;letter-spacing:2px;min-height:28px}
 @media(prefers-reduced-motion:reduce){.boss-banner,.fire-egg-projectile,.egg-body,.egg-trail,.cookoff-arena.shake,.nuke-core,.nuke-ring{animation:none}.fire-egg-projectile{opacity:0}}
+
+/* ---- Slosh & Sons drink rush boss fight ---- */
+.slosh-arena{display:flex;flex-direction:column;gap:12px;max-width:640px;margin:0 auto}
+.slosh-bossbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.slosh-boss-id{display:flex;gap:10px;align-items:center}
+.slosh-lenny{font-size:40px}
+.slosh-boss-name{font-weight:800;letter-spacing:.06em}
+.slosh-lenny-line{font-style:italic;opacity:.85;max-width:280px}
+.slosh-goal{min-width:200px}
+.slosh-goal-label{font-weight:700;font-size:13px;letter-spacing:.04em;margin-bottom:4px}
+.slosh-goal-bar{display:flex;gap:4px}
+.slosh-goal-bar .seg{width:22px;height:12px;border-radius:3px;background:#3a3a3a;border:1px solid #666}
+.slosh-goal-bar .seg.on{background:#38bdf8;border-color:#38bdf8;box-shadow:0 0 8px #38bdf8}
+.slosh-walkouts{font-size:13px;margin-top:4px;color:#fca5a5}
+.slosh-calm{background:#0c4a6e;border:2px solid #38bdf8;border-radius:8px;padding:8px;text-align:center;font-weight:700;animation:boss-pulse 1s ease-in-out infinite}
+.slosh-rage{background:#7f1d1d;border:2px solid #ef4444;border-radius:8px;padding:8px;text-align:center;font-weight:800;color:#fecaca;animation:boss-pulse .7s ease-in-out infinite}
+.slosh-lenny-visual{font-size:44px;text-align:center}
+.slosh-lenny-visual.sweating{animation:boss-pulse .8s ease-in-out infinite}
+.slosh-lenny-visual.angry{filter:drop-shadow(0 0 14px #ef4444)}
+.belt-wrap{border:2px dashed #666;border-radius:10px;padding:8px}
+.belt-label{font-size:12px;letter-spacing:.08em;opacity:.75;margin-bottom:6px}
+.belt-track{position:relative;height:86px;background:#1c1c22;border-radius:8px;overflow:hidden}
+.belt-drink{position:absolute;top:8px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;background:#2a2a33;border:2px solid #888;border-radius:10px;padding:4px 8px;cursor:pointer;transition:left .1s linear;z-index:2}
+.belt-drink:disabled{cursor:not-allowed;opacity:.5}
+.belt-drink-glyph{font-size:30px;line-height:1}
+.belt-drink-name{font-size:11px;white-space:nowrap}
+.slosh-crate{position:absolute;inset:0;z-index:5;background:rgba(120,72,20,.95);border:3px solid #a16207;border-radius:8px;font-weight:800;font-size:15px;cursor:pointer;color:#fff}
+.slosh-counter{position:relative;min-height:64px;border:2px solid #555;border-radius:10px;padding:10px;background:#22222a}
+.slosh-keg{position:absolute;top:-6px;transform:translateX(-50%);font-size:38px;background:none;border:none;cursor:pointer;z-index:3}
+.slosh-keg-hp{position:absolute;top:-4px;right:-6px;background:#dc2626;color:#fff;font-size:12px;font-weight:800;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+.slosh-spill{display:block;width:100%;background:rgba(56,189,248,.25);border:2px solid #38bdf8;border-radius:8px;padding:8px;font-weight:700;cursor:pointer;margin-bottom:8px;color:#e0f2fe}
+.slosh-hand{display:flex;align-items:center;gap:8px;font-size:15px}
+.slosh-hand-label{font-weight:800;letter-spacing:.05em;font-size:13px}
+.slosh-held{font-size:28px}
+.slosh-trash{background:none;border:none;font-size:20px;cursor:pointer}
+.slosh-empty{opacity:.6;font-style:italic}
+.slosh-dazed{font-weight:800;color:#fde047;animation:boss-pulse .5s ease-in-out infinite}
+.slosh-tickets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slosh-ticket{display:flex;flex-direction:column;align-items:center;gap:4px;background:#2f2a1e;border:2px solid #a16207;border-radius:10px;padding:10px 6px;cursor:pointer}
+.slosh-ticket:disabled{cursor:not-allowed;opacity:.55}
+.slosh-ticket.shake{animation:ticket-shake .45s}
+@keyframes ticket-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+.slosh-ticket-glyph{font-size:34px}
+.slosh-ticket-name{font-size:13px;font-weight:700}
+.slosh-patience{display:block;width:100%;height:8px;background:#3a3a3a;border-radius:4px;overflow:hidden}
+.slosh-patience-fill{display:block;height:100%;background:#4ade80;transition:width .1s linear}
+.slosh-patience-fill.low{background:#ef4444}
+.slosh-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.slosh-review{background:#7c3aed;border:2px solid #a78bfa;color:#fff;font-weight:800;border-radius:10px;padding:10px 14px;cursor:pointer}
+.slosh-review:disabled{opacity:.5;cursor:not-allowed}
+.slosh-hint{font-size:12px;opacity:.7}
+@media(prefers-reduced-motion:reduce){.belt-drink{transition:none}.slosh-ticket.shake,.slosh-calm,.slosh-rage,.slosh-dazed,.slosh-lenny-visual.sweating{animation:none}}

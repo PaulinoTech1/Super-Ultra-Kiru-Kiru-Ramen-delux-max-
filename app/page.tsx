@@ -5,6 +5,7 @@ import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
 import DarioDuel from "./DarioDuel";
+import SloshRush from "./SloshRush";
 import { BOWLS, rollBowl, thirdStep } from "./kitchen-rules.mjs";
 import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
@@ -42,6 +43,8 @@ const challengeGuide: Record<string, string> = {
   goat: "Win the chicken mini-game: land 3 egg hits (4 against the fiery chicken).",
   cookoff: "Earn Absolute GOAT, then click the DARIO'S CHALLENGE flyer pinned above the counter.",
   "market-king": "Beat Chef Dario in the cookoff: match his ticket order before he finishes his. Throw fire eggs to stun him.",
+  slosh: "Become Market King, then click the SLOSH & SONS delivery flyer pinned above the counter.",
+  "beverage-boss": "Beat Lenny in the drink rush: serve 8 drink tickets while he fumbles deliveries, spills drinks, and rolls mystery kegs at you. Pray nobody orders the cider.",
 };
 function Shop({
   toppings,
@@ -722,6 +725,20 @@ export default function Home() {
                 🔥 DARIO&apos;S CHALLENGE
               </button>
             )}
+            {discoveries.includes("market-king") && (
+              <button
+                className="flyer-btn"
+                type="button"
+                aria-label="Accept Lenny's drink rush delivery shift"
+                onClick={() => {
+                  beep();
+                  discover("slosh");
+                  S("slosh");
+                }}
+              >
+                🚚 SLOSH &amp; SONS DELIVERY
+              </button>
+            )}
           </div>
           {stage === "boss" ? (
             <ChickenBoss onWin={bossWin} onLose={() => { E("Looks like you need more ramen! You're cooked buddy!"); S("over"); }} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
@@ -1036,6 +1053,8 @@ export default function Home() {
               onThrow={beep}
               onExit={() => S("build")}
             />
+          ) : stage === "slosh" ? (
+            <SloshRush onUnlock={discover} onExit={() => S("build")} />
           ) : (
             <>
               <p className="eyebrow orange">

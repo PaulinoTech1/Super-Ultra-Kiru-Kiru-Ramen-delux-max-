@@ -44,6 +44,8 @@ export const discoveryDefinitions = [
   ["goat", "Absolute GOAT", "Some customers leave with more than a full bowl.", "Win a chicken encounter and reach its victory ending."],
   ["cookoff", "Dario's Challenge", "A rival chef just slid a flyer across the counter.", "Answer Chef Dario's cookoff challenge after earning Absolute GOAT."],
   ["market-king", "Market King", "Beat Chef Dario at his own game.", "Win the 3-round cookoff against Chef Dario."],
+  ["slosh", "Slosh & Sons", "A delivery flyer just slid across the counter.", "Answer Lenny's drink rush delivery shift after becoming Market King."],
+  ["beverage-boss", "Beverage Boss", "Survive the worst distributor in Worcester County.", "Serve 8 drink tickets in Lenny's drink rush."],
 ] as const;
 
 export function bowlNickname(selected: string[], allIngredients: string[]) {
