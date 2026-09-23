@@ -22,6 +22,24 @@ const items = [
   ["hot", "Hot sauce", "Main South kind of heat", "♨", "#dc6946"],
   ["naruto", "Narutomaki", "A very good spiral", "◎", "#eba8a0"],
 ];
+// Where to find each of the 15 challenges. Shown in popups to make them easier to find.
+const challengeGuide: Record<string, string> = {
+  patience: "Craving screen: pick Pizza or Burger 5 times in a row.",
+  wake: "Wait 30 seconds without touching anything until Kenji sleeps, then click Wake Chef Kenji.",
+  logo: "Click the RAMEN TIME logo top-left 3 times.",
+  bottles: "Build screen: click both bottles on the counter canvas.",
+  sign: "Click the MADE WITH SOUL IN THE 508 stamp.",
+  "sweet-heat": "Build screen: select Sweet corn and Hot sauce together.",
+  location: "Click WORCESTER, MA / OPEN LATE in the header.",
+  order: "Click ORDER #0508 above the counter.",
+  "local-say": "Click WOOS-TAH, NOT WOR-CESTER below the counter.",
+  fridge: "Build screen: select all 8 ingredients at once.",
+  minimalist: "Build screen: select only Noodles, nothing else.",
+  chicken: "Build screen: add 4 ajitama eggs with the + ADD EGG button.",
+  fiery: "Build screen: add Hot sauce first, then 4 ajitama eggs.",
+  golden: "Build screen: select every other topping first, then 4 ajitama eggs.",
+  goat: "Win the chicken mini-game by landing 3 egg hits.",
+};
 function Shop({
   toppings,
   eggs,
@@ -286,7 +304,10 @@ export default function Home() {
       return loadDiscoveries();
     }),
     [discoveryToast, setDiscoveryToast] = useState<string | null>(null),
-    [specialSign] = useState<string>(specialSigns[0]);
+    [specialSign] = useState<string>(specialSigns[0]),
+    [showChallenges, setShowChallenges] = useState(false),
+    [hintPopupId, setHintPopupId] = useState<string | null>(null),
+    [showIntroPopup, setShowIntroPopup] = useState(false);
   const discoveriesReady = useRef(true);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -314,6 +335,23 @@ export default function Home() {
     const timer = window.setTimeout(() => setDiscoveryToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [discoveryToast]);
+  // Intro popup: nudge toward the 15 challenges once, dismissible.
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("kuru-kuru-challenges-intro-seen")) return;
+    } catch { /* ignore */ }
+    if (discoveries.length >= 5) return;
+    const t = window.setTimeout(() => setShowIntroPopup(true), 1800);
+    return () => window.clearTimeout(t);
+  }, [discoveries.length]);
+  function dismissIntroPopup() {
+    setShowIntroPopup(false);
+    try { window.localStorage.setItem("kuru-kuru-challenges-intro-seen", "1"); } catch { /* ignore */ }
+  }
+  function openNextHint() {
+    const next = discoveryDefinitions.find(([id]) => !discoveries.includes(id));
+    if (next) setHintPopupId(next[0] as string);
+  }
   useEffect(() => {
     const eligible = stage === "roll" || stage === "welcome" || stage === "build";
     if (!eligible || sleepy) return;
@@ -580,13 +618,23 @@ export default function Home() {
         >
           <i /> WORCESTER, MA <span>/</span> OPEN LATE
         </button>
-        <button
-          className="sound"
-          aria-pressed={sound}
-          onClick={() => M(!sound)}
-        >
-          ♪ SOUND {sound ? "ON" : "OFF"}
-        </button>
+        <div className="header-actions">
+          <button
+            className="challenges-btn"
+            type="button"
+            onClick={() => setShowChallenges(true)}
+            aria-label={`Open challenges, ${discoveries.length} of ${discoveryDefinitions.length} found`}
+          >
+            ★ CHALLENGES {discoveries.length}/{discoveryDefinitions.length}
+          </button>
+          <button
+            className="sound"
+            aria-pressed={sound}
+            onClick={() => M(!sound)}
+          >
+            ♪ SOUND {sound ? "ON" : "OFF"}
+          </button>
+        </div>
       </header>
       <section className="intro">
         <div>
@@ -1050,6 +1098,14 @@ export default function Home() {
         </div>
       </section>
       {discoveryToast && <p className="discovery-toast" role="status">{discoveryToast}</p>}
+      <div className="challenges-cta-row">
+        <button className="challenges-cta" type="button" onClick={() => setShowChallenges(true)}>
+          ★ View all 15 challenges ({discoveries.length}/{discoveryDefinitions.length})
+        </button>
+        <button className="hint-cta" type="button" onClick={openNextHint}>
+          Need a hint? →
+        </button>
+      </div>
       <details className="discoveries">
         <summary>DISCOVERY LOG: {discoveries.length} / {discoveryDefinitions.length}</summary>
         <div>
@@ -1091,6 +1147,101 @@ export default function Home() {
           </button>
         </aside>
       )}
+      {showIntroPopup && (
+        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Hidden challenges intro">
+          <div className="popup-card intro-popup">
+            <h3>Psst. 15 hidden challenges.</h3>
+            <p>This shop hides 15 secrets. Logo taps, bottle chaos, egg math, chicken encounters. Want the map?</p>
+            <div className="popup-actions">
+              <button className="primary" type="button" onClick={() => { dismissIntroPopup(); setShowChallenges(true); }}>
+                SHOW ME THE MAP →
+              </button>
+              <button className="text-button" type="button" onClick={dismissIntroPopup}>
+                I like surprises. ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showChallenges && (
+        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="15 challenges">
+          <div className="popup-card challenges-modal">
+            <div className="popup-header">
+              <h3>15 Hidden Challenges</h3>
+              <button type="button" aria-label="Close challenges" onClick={() => setShowChallenges(false)}>×</button>
+            </div>
+            <p className="popup-progress">{discoveries.length} / {discoveryDefinitions.length} found. Tap any hidden one to see exactly where it lives.</p>
+            <div className="challenges-grid">
+              {discoveryDefinitions.map(([id, label, hint, description]) => {
+                const unlocked = discoveries.includes(id);
+                return (
+                  <div key={id} className={unlocked ? "challenge-card unlocked" : "challenge-card"}>
+                    <span className="challenge-icon" aria-hidden="true">{unlocked ? "✓" : "?"}</span>
+                    <div>
+                      <strong>{unlocked ? label : "Hidden challenge"}</strong>
+                      <small className="challenge-hint">{hint}</small>
+                      <small className="challenge-where">Find it: {challengeGuide[id] || description}</small>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="popup-actions">
+              <button className="primary" type="button" onClick={() => setShowChallenges(false)}>
+                BACK TO RAMEN →
+              </button>
+              <button className="text-button" type="button" onClick={openNextHint}>
+                Give me one hint →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {hintPopupId && (() => {
+        const def = discoveryDefinitions.find(([id]) => id === hintPopupId);
+        if (!def) return null;
+        const [id, label, hint] = def;
+        const unlocked = discoveries.includes(id);
+        return (
+          <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Challenge hint">
+            <div className="popup-card hint-popup">
+              <div className="popup-header">
+                <h3>{unlocked ? label : "Need a nudge?"}</h3>
+                <button type="button" aria-label="Close hint" onClick={() => setHintPopupId(null)}>×</button>
+              </div>
+              {!unlocked && (
+                <>
+                  <p className="challenge-hint">{hint}</p>
+                  <p className="challenge-where">Find it: {challengeGuide[id]}</p>
+                  <div className="popup-actions">
+                    <button className="primary" type="button" onClick={() => { setHintPopupId(null); setShowChallenges(true); }}>
+                      OPEN FULL MAP →
+                    </button>
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={() => {
+                        const next = discoveryDefinitions.find(([nid]) => nid !== id && !discoveries.includes(nid as string));
+                        setHintPopupId(next ? (next[0] as string) : null);
+                      }}
+                    >
+                      Next hint →
+                    </button>
+                  </div>
+                </>
+              )}
+              {unlocked && (
+                <>
+                  <p>You already found {label}. Nice.</p>
+                  <div className="popup-actions">
+                    <button className="primary" type="button" onClick={() => setHintPopupId(null)}>KEEP COOKING →</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </main>
   );
 }
