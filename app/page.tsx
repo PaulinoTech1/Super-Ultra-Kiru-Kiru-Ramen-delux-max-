@@ -33,12 +33,12 @@ const challengeGuide: Record<string, string> = {
   location: "Click WORCESTER, MA / OPEN LATE in the header.",
   order: "Click ORDER #0508 above the counter.",
   "local-say": "Click WOOS-TAH, NOT WOR-CESTER below the counter.",
-  fridge: "Build screen: select all 8 ingredients at once.",
+  fridge: "Build screen: select all 7 toppings at once (everything except Ajitama).",
   minimalist: "Build screen: select only Noodles, nothing else.",
-  chicken: "Build screen: add 4 ajitama eggs with the + ADD EGG button.",
-  fiery: "Build screen: add Hot sauce first, then 4 ajitama eggs.",
-  golden: "Build screen: select every other topping first, then 4 ajitama eggs.",
-  goat: "Win the chicken mini-game by landing 3 egg hits.",
+  chicken: "Build screen: press + ADD EGG 4 times with no Hot sauce selected to meet the normal chicken.",
+  fiery: "Build screen: select Hot sauce (but not every topping), then 4 ajitama eggs.",
+  golden: "Build screen: select all 6 toppings first (everything except Noodles and Ajitama), then 4 ajitama eggs.",
+  goat: "Win the chicken mini-game: land 3 egg hits (4 against the fiery chicken).",
 };
 function Shop({
   toppings,
