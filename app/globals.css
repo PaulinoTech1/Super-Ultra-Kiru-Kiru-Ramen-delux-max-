@@ -149,3 +149,7 @@
 .slosh-review:disabled{opacity:.5;cursor:not-allowed}
 .slosh-hint{font-size:12px;opacity:.7}
 @media(prefers-reduced-motion:reduce){.belt-drink{transition:none}.slosh-ticket.shake,.slosh-calm,.slosh-rage,.slosh-dazed,.slosh-lenny-visual.sweating{animation:none}}
+
+/* ---- Touch-friendly boss fights (all viewports) ---- */
+button{touch-action:manipulation}
+.ingredient,.fire-egg-btn,.egg-stepper button,.belt-drink,.slosh-ticket,.slosh-crate,.slosh-keg,.slosh-spill,.slosh-review,.accept-btn{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}

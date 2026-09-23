@@ -20,7 +20,7 @@ export const DUEL_ORDERS = [
 
 // Dario adds one correct topping per interval. He gets faster every round.
 export function darioIntervalMs(roundIndex) {
-  return Math.max(1200, 3500 - roundIndex * 800);
+  return Math.max(1400, 4200 - roundIndex * 800);
 }
 
 // Pick a ticket, avoiding repeats within a duel when possible.

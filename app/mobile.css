@@ -99,4 +99,22 @@
   .footer-note { width: 100%; }
   .help { padding: 15px; margin-bottom: 18px; }
   .help p { font-size: 10px; line-height: 1.7; }
+  /* Dario cookoff duel: thumb-sized targets */
+  .cookoff-ingredients .ingredient { min-height: 62px; padding: 14px 12px; font-size: 15px; }
+  .cookoff-ingredients .ingredient-icon { font-size: 30px; }
+  .cookoff-actions .egg-stepper button { min-width: 58px; min-height: 58px; font-size: 24px; }
+  .cookoff-actions .egg-stepper output { font-size: 15px; }
+  .fire-egg-btn { font-size: 14px; padding: 18px 12px; }
+  .ticket h3 { font-size: 22px; }
+  .ticket p { font-size: 12px; }
+  .boss-name-huge { font-size: 32px; letter-spacing: 2px; }
+  .boss-bars { gap: 10px; }
+  .player-bowl { flex-wrap: wrap; }
+  .bowl-contents { font-size: 24px; }
+  /* Lenny drink rush: same treatment */
+  .belt-drink { padding: 10px 12px; }
+  .belt-drink-glyph { font-size: 36px; }
+  .slosh-ticket { padding: 14px 8px; }
+  .slosh-ticket-glyph { font-size: 40px; }
+  .slosh-review { min-height: 56px; font-size: 15px; }
 }
