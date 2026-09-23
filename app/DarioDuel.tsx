@@ -1,0 +1,349 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  COOKOFF_WINS_NEEDED,
+  DARIO_STUN_MS,
+  FIRE_EGG_COOLDOWN_MS,
+  ROUND_END_MS,
+  darioIntervalMs,
+  darioIsDone,
+  darioNextTopping,
+  fireEggKnockoff,
+  orderMatches,
+  pickOrder,
+} from "./cookoff-rules.mjs";
+
+type Item = string[][];
+type Phase = "intro" | "roundIntro" | "cook" | "roundEnd" | "duelEnd";
+type DuelOrder = { name: string; toppings: string[]; eggs: number };
+
+const DARIO_TAUNTS = [
+  "My nonna builds faster, and she's a parking ticket!",
+  "WUSS-ter? More like WUSS-terrible! ...wait.",
+  "You call that chashu placement?!",
+  "I'm from Providence and even I know better!",
+  "Dario does it Dario-fast. Watch and weep!",
+  "Your broth has no ambition!",
+];
+const DARIO_STUNNED_TAUNTS = [
+  "OW! MY EYEBROWS! That egg was ON FIRE!",
+  "You fight dirty! I respect it! OW!",
+  "My beautiful mise en place! RUINED!",
+];
+const DARIO_SORE_LOSER = [
+  "Lucky. LUCKY. The ticket was rigged!",
+  "Beginner's luck! The health inspector distracted me!",
+];
+const DARIO_WINNER = [
+  "Too slow, kid. Dario does it Dario-fast.",
+  "Another masterpiece. Another legend. Me.",
+];
+const KENJI_CORNER = [
+  "That's my student! Keep the pressure on!",
+  "Fire eggs! Where did you learn that?! Beautiful!",
+];
+
+function pickTaunt(lines: string[], rand = Math.random) {
+  return lines[Math.floor(rand() * lines.length)];
+}
+
+function itemById(items: Item, id: string) {
+  return items.find(([itemId]) => itemId === id);
+}
+
+export default function DarioDuel({
+  items,
+  onUnlock,
+  onThrow,
+  onExit,
+}: {
+  items: Item;
+  onUnlock: (id: string) => void;
+  onThrow: () => void;
+  onExit: () => void;
+}) {
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [playerWins, setPlayerWins] = useState(0);
+  const [darioWins, setDarioWins] = useState(0);
+  const [usedNames, setUsedNames] = useState<string[]>([]);
+  const [order, setOrder] = useState<DuelOrder>(() => pickOrder([]) as DuelOrder);
+  const [playerSelected, setPlayerSelected] = useState<string[]>([]);
+  const [playerEggs, setPlayerEggs] = useState(0);
+  const [darioToppings, setDarioToppings] = useState<string[]>([]);
+  const [stunnedUntil, setStunnedUntil] = useState(0);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [taunt, setTaunt] = useState("So. The egg-thrower wants a REAL challenge.");
+  const [roundResult, setRoundResult] = useState<"player" | "dario" | null>(null);
+  const [hitFlash, setHitFlash] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const roundOver = useRef(false);
+
+  // Clock for cooldown / stun indicators.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Dario builds the ticket on a timer. He gets faster every round.
+  useEffect(() => {
+    if (phase !== "cook") return;
+    const timer = setInterval(() => {
+      if (Date.now() < stunnedUntil) return;
+      setDarioToppings((prev) => {
+        const next = darioNextTopping(prev, order);
+        return next ? [...prev, next] : prev;
+      });
+    }, darioIntervalMs(roundIndex));
+    return () => clearInterval(timer);
+  }, [phase, roundIndex, order, stunnedUntil]);
+
+  function endRound(winner: "player" | "dario") {
+    if (roundOver.current) return;
+    roundOver.current = true;
+    const pw = playerWins + (winner === "player" ? 1 : 0);
+    const dw = darioWins + (winner === "dario" ? 1 : 0);
+    setPlayerWins(pw);
+    setDarioWins(dw);
+    setRoundResult(winner);
+    setTaunt(
+      winner === "player"
+        ? pickTaunt(DARIO_SORE_LOSER)
+        : pickTaunt(DARIO_WINNER),
+    );
+    setPhase("roundEnd");
+    window.setTimeout(() => {
+      if (pw >= COOKOFF_WINS_NEEDED || dw >= COOKOFF_WINS_NEEDED) {
+        if (pw >= COOKOFF_WINS_NEEDED) onUnlock("market-king");
+        setPhase("duelEnd");
+      } else {
+        const names = [...usedNames, order.name];
+        setUsedNames(names);
+        setOrder(pickOrder(names) as DuelOrder);
+        setRoundIndex(roundIndex + 1);
+        setPlayerSelected([]);
+        setPlayerEggs(0);
+        setDarioToppings([]);
+        setStunnedUntil(0);
+        setCooldownUntil(0);
+        setRoundResult(null);
+        roundOver.current = false;
+        setPhase("roundIntro");
+      }
+    }, ROUND_END_MS);
+  }
+
+  // Player completes the ticket.
+  useEffect(() => {
+    if (phase === "cook" && orderMatches(playerSelected, playerEggs, order)) {
+      setTaunt(pickTaunt(KENJI_CORNER));
+      endRound("player");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerSelected, playerEggs, phase, order]);
+
+  // Dario completes the ticket.
+  useEffect(() => {
+    if (phase === "cook" && darioIsDone(darioToppings, order)) endRound("dario");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [darioToppings, phase, order]);
+
+  function togglePlayer(id: string) {
+    if (phase !== "cook") return;
+    setPlayerSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function throwFireEgg() {
+    if (phase !== "cook" || Date.now() < cooldownUntil) return;
+    onThrow();
+    setCooldownUntil(Date.now() + FIRE_EGG_COOLDOWN_MS);
+    setStunnedUntil(Date.now() + DARIO_STUN_MS);
+    setDarioToppings((prev) => fireEggKnockoff(prev));
+    setTaunt(pickTaunt(DARIO_STUNNED_TAUNTS));
+    setHitFlash(true);
+    window.setTimeout(() => setHitFlash(false), 700);
+  }
+
+  function rematch() {
+    setRoundIndex(0);
+    setPlayerWins(0);
+    setDarioWins(0);
+    setUsedNames([]);
+    setOrder(pickOrder([]) as DuelOrder);
+    setPlayerSelected([]);
+    setPlayerEggs(0);
+    setDarioToppings([]);
+    setStunnedUntil(0);
+    setCooldownUntil(0);
+    setRoundResult(null);
+    setTaunt("So. The egg-thrower wants a REAL challenge.");
+    roundOver.current = false;
+    setPhase("roundIntro");
+  }
+
+  const stunned = now < stunnedUntil;
+  const cooling = now < cooldownUntil;
+  const orderToppingNames = order.toppings.map(
+    (id) => itemById(items, id)?.[1] ?? id,
+  );
+
+  return (
+    <div className="cookoff">
+      <p className="eyebrow orange">ACROSS THE COUNTER</p>
+      <h2>Chef Dario&apos;s Cookoff</h2>
+      <p className="cookoff-score" aria-live="polite">
+        YOU {playerWins} — {darioWins} DARIO
+        <small> first to {COOKOFF_WINS_NEEDED}</small>
+      </p>
+
+      {phase === "intro" && (
+        <>
+          <p className="description">
+            Chef Dario slides in from across the Worcester Public Market, twirling
+            a ladle like a weapon. &ldquo;Your ramen is SOUP,&rdquo; he declares.
+            &ldquo;Three tickets. We both build. Fastest bowl wins the round.&rdquo;
+          </p>
+          <p className="description">
+            Match each ticket exactly. And yes, those eggs are fire-coated.
+            Throw one at Dario to stun him and knock his latest topping clean off.
+          </p>
+          <button className="primary" type="button" onClick={() => setPhase("roundIntro")}>
+            ACCEPT THE CHALLENGE <span>→</span>
+          </button>
+          <p className="tiny">
+            <button className="linklike" type="button" onClick={onExit}>
+              Actually, I&apos;m not ready. Back to the shop.
+            </button>
+          </p>
+        </>
+      )}
+
+      {phase === "roundIntro" && (
+        <>
+          <div className="ticket" role="status">
+            <p className="eyebrow orange">ROUND {roundIndex + 1} TICKET</p>
+            <h3>{order.name}</h3>
+            <p>
+              {orderToppingNames.join(" · ")}
+              {order.eggs > 0 && ` · ${order.eggs} ajitama`}
+            </p>
+            <small>Dario gets faster every round. Build it before he does.</small>
+          </div>
+          <button className="primary" type="button" onClick={() => setPhase("cook")}>
+            START COOKING <span>→</span>
+          </button>
+        </>
+      )}
+
+      {(phase === "cook" || phase === "roundEnd") && (
+        <>
+          <div className={`dario-panel${stunned ? " stunned" : ""}${hitFlash ? " hit" : ""}`}>
+            <p className="eyebrow orange">DARIO&apos;S COUNTER</p>
+            <div className="dario-progress" aria-label={`Dario has placed ${darioToppings.length} of ${order.toppings.length} toppings`}>
+              {order.toppings.map((id) => {
+                const placed = darioToppings.includes(id);
+                const item = itemById(items, id);
+                return (
+                  <span key={id} className={placed ? "placed" : ""} title={item?.[1] ?? id}>
+                    {placed ? item?.[3] ?? "?" : "○"}
+                  </span>
+                );
+              })}
+            </div>
+            {stunned && <p className="stun-flag" role="status">STUNNED!</p>}
+            <p className="taunt" aria-live="polite">&ldquo;{taunt}&rdquo;</p>
+          </div>
+
+          <div className="ticket" role="status">
+            <p className="eyebrow orange">TICKET: {order.name}</p>
+            <p>
+              {orderToppingNames.join(" · ")}
+              {order.eggs > 0 && ` · ${order.eggs} ajitama`}
+            </p>
+          </div>
+
+          {phase === "cook" ? (
+            <>
+              <div className="ingredients cookoff-ingredients">
+                {items
+                  .filter(([id]) => id !== "ajitama")
+                  .map(([id, name, , glyph, color]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={playerSelected.includes(id) ? "ingredient selected" : "ingredient"}
+                      aria-pressed={playerSelected.includes(id)}
+                      onClick={() => togglePlayer(id)}
+                    >
+                      <span className="ingredient-icon" style={{ color }}>{glyph}</span>
+                      <span>{name}</span>
+                      <b>{playerSelected.includes(id) ? "−" : "+"}</b>
+                    </button>
+                  ))}
+              </div>
+              <div className="cookoff-actions">
+                <div className="egg-stepper" aria-label="Ajitama for the ticket">
+                  <button type="button" onClick={() => setPlayerEggs((v) => Math.max(0, v - 1))} disabled={playerEggs === 0} aria-label="Remove one ajitama">−</button>
+                  <output aria-live="polite">{playerEggs} 🥚</output>
+                  <button type="button" onClick={() => setPlayerEggs((v) => Math.min(4, v + 1))} disabled={playerEggs >= 4} aria-label="Add one ajitama">+</button>
+                </div>
+                <button
+                  type="button"
+                  className={`fire-egg-btn${cooling ? " cooling" : ""}`}
+                  disabled={cooling}
+                  onClick={throwFireEgg}
+                  aria-label={cooling ? "Fire egg recharging" : "Throw a fire-coated egg at Dario"}
+                >
+                  🔥 THROW FIRE EGG{cooling ? "…" : ""}
+                </button>
+              </div>
+              <p className="tiny">Match the ticket exactly to take the round. Fire eggs stun Dario and knock off his last topping.</p>
+            </>
+          ) : (
+            <div className="result" role="status">
+              {roundResult === "player" ? `YOU TAKE ROUND ${roundIndex + 1}!` : `DARIO TAKES ROUND ${roundIndex + 1}.`}
+            </div>
+          )}
+        </>
+      )}
+
+      {phase === "duelEnd" && (
+        <>
+          {playerWins >= COOKOFF_WINS_NEEDED ? (
+            <>
+              <p className="eyebrow orange">MARKET KING</p>
+              <h2>Dario is cooked.</h2>
+              <p className="description">
+                Dario stares at your bowl, then at his own. &ldquo;...Fine. FINE!
+                Worcester has TWO great ramen shops.&rdquo; He storms off,
+                eyebrows still smoking.
+              </p>
+              <div className="result" role="status">MARKET KING STATUS EARNED.</div>
+            </>
+          ) : (
+            <>
+              <p className="eyebrow orange">DARIO WINS</p>
+              <h2>He eats your noodles.</h2>
+              <p className="description">
+                &ldquo;Come back when your eggs aren&apos;t the only thing with
+                fire in this kitchen!&rdquo; Dario cackles all the way back
+                across the market.
+              </p>
+            </>
+          )}
+          <button className="primary" type="button" onClick={rematch}>
+            REMATCH <span>↻</span>
+          </button>
+          <p className="tiny">
+            <button className="linklike" type="button" onClick={onExit}>
+              Back to the shop.
+            </button>
+          </p>
+        </>
+      )}
+    </div>
+  );
+}

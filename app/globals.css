@@ -33,3 +33,33 @@
 .intro-popup h3,.hint-popup h3{color:var(--orange)}
 .intro-popup p,.hint-popup p{font-size:12px;line-height:1.7;color:#c9cfb8}
 @media(max-width:680px){.challenges-grid{grid-template-columns:1fr}.header-actions .challenges-btn{font-size:8px;padding:8px}.popup-card{padding:16px}}
+
+/* Chef Dario cookoff duel */
+.flyer-btn{background:#b73a2e!important;color:#f6e8c8!important;font-size:9px!important;font-weight:bold;letter-spacing:1px;padding:8px 10px!important;transform:rotate(-3deg);border:2px solid #7e241b!important;box-shadow:2px 2px 0 #10140f;animation:flyer-wiggle 2.4s ease-in-out infinite}
+@keyframes flyer-wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(-1deg) translateY(-2px)}}
+.cookoff-score{font-size:16px;font-weight:900;letter-spacing:2px;color:var(--cream);margin:0 0 18px}
+.cookoff-score small{font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:normal}
+.ticket{border:2px dashed #7e8665;background:#2e342a;padding:14px;margin-bottom:18px}
+.ticket h3{margin:4px 0 8px;font-size:20px;color:var(--orange)}
+.ticket p{margin:0;font-size:11px;line-height:1.7;color:#d6dac3}
+.ticket small{display:block;margin-top:8px;font-size:8px;color:var(--muted);letter-spacing:.5px}
+.dario-panel{border:1px solid #6b4a3a;background:#33291f;padding:16px;margin-bottom:18px;position:relative;transition:background .2s}
+.dario-panel.stunned{background:#3d2c1c;border-color:var(--orange)}
+.dario-panel.hit{animation:dario-hit .6s steps(3,end)}
+@keyframes dario-hit{0%{transform:translateX(-8px)}50%{transform:translateX(8px)}100%{transform:translateX(0)}}
+.dario-progress{display:flex;gap:10px;font-size:26px;margin:10px 0;min-height:34px}
+.dario-progress span{opacity:.28;filter:grayscale(1)}
+.dario-progress span.placed{opacity:1;filter:none}
+.stun-flag{color:#ffb347;font-weight:900;letter-spacing:3px;font-size:14px;margin:6px 0;animation:stun-blink .5s steps(2,end) infinite}
+@keyframes stun-blink{50%{opacity:.25}}
+.taunt{font-size:11px;line-height:1.7;color:#e8c9a0;font-style:italic;margin:8px 0 0}
+.cookoff-ingredients{margin-bottom:12px}
+.cookoff-actions{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
+.cookoff-actions .egg-stepper{width:auto;flex:1;border:1px solid var(--line);padding:6px 8px;margin:0}
+.fire-egg-btn{flex:1.4;background:linear-gradient(180deg,#c14e2a,#8f2f16);color:#ffe9c9;font-weight:900;letter-spacing:1px;font-size:11px;padding:12px;border:2px solid #ffb347;box-shadow:0 4px 0 #5e1f0e;animation:fire-flicker 1.1s ease-in-out infinite}
+.fire-egg-btn:hover:not(:disabled){filter:brightness(1.15)}
+.fire-egg-btn.cooling{animation:none;opacity:.45;box-shadow:none}
+@keyframes fire-flicker{0%,100%{box-shadow:0 4px 0 #5e1f0e,0 0 0 #ffb347}50%{box-shadow:0 4px 0 #5e1f0e,0 0 14px #ffb347}}
+.linklike{color:var(--orange);font-size:9px;letter-spacing:.6px;text-decoration:underline;padding:0}
+@media(max-width:680px){.cookoff-actions{flex-direction:column}.dario-progress{font-size:22px}}
+@media(prefers-reduced-motion:reduce){.flyer-btn,.fire-egg-btn,.dario-panel.hit,.stun-flag{animation:none}}

@@ -42,6 +42,8 @@ export const discoveryDefinitions = [
   ["fiery", "Too Hot to Handle", "A little heat can make a surprise much less ordinary.", "Enter the fiery chicken encounter."],
   ["golden", "A Golden Problem", "An extravagant order may attract extravagant company.", "Enter the golden chicken encounter."],
   ["goat", "Absolute GOAT", "Some customers leave with more than a full bowl.", "Win a chicken encounter and reach its victory ending."],
+  ["cookoff", "Dario's Challenge", "A rival chef just slid a flyer across the counter.", "Answer Chef Dario's cookoff challenge after earning Absolute GOAT."],
+  ["market-king", "Market King", "Beat Chef Dario at his own game.", "Win the 3-round cookoff against Chef Dario."],
 ] as const;
 
 export function bowlNickname(selected: string[], allIngredients: string[]) {

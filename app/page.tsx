@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { makeDeck, drawRound, openingReply } from "./rules.mjs";
 import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
+import DarioDuel from "./DarioDuel";
 import { BOWLS, rollBowl, thirdStep } from "./kitchen-rules.mjs";
 import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
@@ -22,7 +23,7 @@ const items = [
   ["hot", "Hot sauce", "Main South kind of heat", "♨", "#dc6946"],
   ["naruto", "Narutomaki", "A very good spiral", "◎", "#eba8a0"],
 ];
-// Where to find each of the 15 challenges. Shown in popups to make them easier to find.
+// Where to find each challenge. Shown in popups to make them easier to find.
 const challengeGuide: Record<string, string> = {
   patience: "Craving screen: pick Pizza or Burger 5 times in a row.",
   wake: "Wait 30 seconds without touching anything until Kenji sleeps, then click Wake Chef Kenji.",
@@ -39,6 +40,8 @@ const challengeGuide: Record<string, string> = {
   fiery: "Build screen: select Hot sauce (but not every topping), then 4 ajitama eggs.",
   golden: "Build screen: select all 6 toppings first (everything except Noodles and Ajitama), then 4 ajitama eggs.",
   goat: "Win the chicken mini-game: land 3 egg hits (4 against the fiery chicken).",
+  cookoff: "Earn Absolute GOAT, then click the DARIO'S CHALLENGE flyer pinned above the counter.",
+  "market-king": "Beat Chef Dario in the cookoff: match his ticket order before he finishes his. Throw fire eggs to stun him.",
 };
 function Shop({
   toppings,
@@ -335,7 +338,7 @@ export default function Home() {
     const timer = window.setTimeout(() => setDiscoveryToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [discoveryToast]);
-  // Intro popup: nudge toward the 15 challenges once, dismissible.
+  // Intro popup: nudge toward the challenges once, dismissible.
   useEffect(() => {
     try {
       if (window.localStorage.getItem("kuru-kuru-challenges-intro-seen")) return;
@@ -590,7 +593,9 @@ export default function Home() {
                   ? round
                     ? "Same rank. Huh. We draw again. No funny business."
                     : "Good bowl. Now, one last thing. You feeling lucky?"
-                  : round?.winner === "player"
+                  : stage === "cookoff"
+                    ? "Dario?! In MY market?! Show him what Worcester ramen really is, kid."
+                    : round?.winner === "player"
                     ? "You got me, kid. That's a champion's bowl. Come back hungry."
                     : "The house wins. Your ramen's still good. Eat it before it gets cold.";
   return (
@@ -703,6 +708,20 @@ export default function Home() {
             >
               ORDER #0508 ↗
             </button>
+            {discoveries.includes("goat") && (
+              <button
+                className="flyer-btn"
+                type="button"
+                aria-label="Accept Chef Dario's cookoff challenge"
+                onClick={() => {
+                  beep();
+                  discover("cookoff");
+                  S("cookoff");
+                }}
+              >
+                🔥 DARIO&apos;S CHALLENGE
+              </button>
+            )}
           </div>
           {stage === "boss" ? (
             <ChickenBoss onWin={bossWin} onLose={() => { E("Looks like you need more ramen! You're cooked buddy!"); S("over"); }} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
@@ -1010,6 +1029,13 @@ export default function Home() {
                 .
               </p>
             </>
+          ) : stage === "cookoff" ? (
+            <DarioDuel
+              items={items}
+              onUnlock={discover}
+              onThrow={beep}
+              onExit={() => S("build")}
+            />
           ) : (
             <>
               <p className="eyebrow orange">
@@ -1100,7 +1126,7 @@ export default function Home() {
       {discoveryToast && <p className="discovery-toast" role="status">{discoveryToast}</p>}
       <div className="challenges-cta-row">
         <button className="challenges-cta" type="button" onClick={() => setShowChallenges(true)}>
-          ★ View all 15 challenges ({discoveries.length}/{discoveryDefinitions.length})
+          ★ View all {discoveryDefinitions.length} challenges ({discoveries.length}/{discoveryDefinitions.length})
         </button>
         <button className="hint-cta" type="button" onClick={openNextHint}>
           Need a hint? →
@@ -1150,8 +1176,8 @@ export default function Home() {
       {showIntroPopup && (
         <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Hidden challenges intro">
           <div className="popup-card intro-popup">
-            <h3>Psst. 15 hidden challenges.</h3>
-            <p>This shop hides 15 secrets. Logo taps, bottle chaos, egg math, chicken encounters. Want the map?</p>
+            <h3>Psst. {discoveryDefinitions.length} hidden challenges.</h3>
+            <p>This shop hides {discoveryDefinitions.length} secrets. Logo taps, bottle chaos, egg math, chicken encounters. Want the map?</p>
             <div className="popup-actions">
               <button className="primary" type="button" onClick={() => { dismissIntroPopup(); setShowChallenges(true); }}>
                 SHOW ME THE MAP →
@@ -1164,10 +1190,10 @@ export default function Home() {
         </div>
       )}
       {showChallenges && (
-        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="15 challenges">
+        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label={`${discoveryDefinitions.length} challenges`}>
           <div className="popup-card challenges-modal">
             <div className="popup-header">
-              <h3>15 Hidden Challenges</h3>
+              <h3>{discoveryDefinitions.length} Hidden Challenges</h3>
               <button type="button" aria-label="Close challenges" onClick={() => setShowChallenges(false)}>×</button>
             </div>
             <p className="popup-progress">{discoveries.length} / {discoveryDefinitions.length} found. Tap any hidden one to see exactly where it lives.</p>
