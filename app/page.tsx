@@ -14,6 +14,18 @@ import {
   addAjitama,
   ajitamaPositions,
 } from "./chicken-rules.mjs";
+import {
+  CUSTOMERS_PER_DAY,
+  MAX_HEARTS,
+  initialRun,
+  startDay,
+  serveBowl,
+  loseCustomer,
+  starsForDay,
+  loadBest,
+  saveBest,
+  recordRun,
+} from "./day-rules.mjs";
 const items = [
   ["noodles", "Noodles", "The good, slurpy stuff", "≋", "#edc675"],
   ["ajitama", "Ajitama", "Jammy. Marinated. Perfect.", "◒", "#f4ad39"],
@@ -304,7 +316,12 @@ export default function Home() {
     [fieryChicken, setFieryChicken] = useState(false),
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
-    [duelLoss, setDuelLoss] = useState(false),
+    [run, setRun] = useState(initialRun),
+    [serveResult, setServeResult] = useState<{ kind: string; earned?: number } | null>(null),
+    [best, setBest] = useState(() => {
+      if (typeof window === "undefined") return { day: 0, coins: 0, bowls: 0 };
+      return loadBest();
+    }),
     [discoveries, setDiscoveries] = useState<string[]>(() => {
       if (typeof window === "undefined") return [];
       return loadDiscoveries();
@@ -597,9 +614,22 @@ export default function Home() {
   }
   function bossWin() {
     discover("goat");
-    U((v) => (v.includes("noodles") ? v : [...v, "noodles"]));
+    const withNoodles = selected.includes("noodles") ? selected : [...selected, "noodles"];
+    const { run: next, earned } = serveBowl(run, withNoodles, { goatWon: true });
+    setRun(next);
+    setServeResult({ kind: "goat", earned });
+    U(withNoodles);
     E("");
     S("goat");
+  }
+  function chickenLose() {
+    const { run: next } = loseCustomer(run);
+    setRun(next);
+    setServeResult({ kind: "chicken-loss" });
+    E(next.result === "gameover"
+      ? "The chicken stands victorious over the counter. The shop can't take another hit."
+      : "Looks like you need more ramen! You're cooked, buddy. The customer leaves.");
+    S("over");
   }
   function duel() {
     if (!canPlay) return;
@@ -615,28 +645,91 @@ export default function Home() {
     D(result.remaining);
     Q(result);
     if (result.winner === "player") {
-      E("You win the card duel. Chef Kenji lets you stay on the counter.");
+      const { run: next, earned } = serveBowl(run, selected, { duelWon: true });
+      setRun(next);
+      setServeResult({ kind: "duel-win", earned });
+      E(`The customer is delighted. +${earned} coins. Chef Kenji nods approvingly.`);
+      S("over");
+    } else if (result.winner === "draw") {
+      const { run: next, earned } = serveBowl(run, selected, {});
+      setRun(next);
+      setServeResult({ kind: "duel-draw", earned });
+      E(`All 52 cards tied. The customer calls it a legendary meal. +${earned} coins.`);
+      S("over");
     } else if (result.winner !== "tie") {
-      setDuelLoss(true);
-      E("Chef Kenji wins. You're kicked off the counter. Click the apology to restart.");
+      const { run: next } = loseCustomer(run);
+      setRun(next);
+      setServeResult({ kind: "duel-loss" });
+      E(next.result === "gameover"
+        ? "Chef Kenji wins the duel, and the customer storms out. That was the last straw."
+        : "Chef Kenji wins the duel. The customer walks out hungry.");
       S("over");
     }
   }
-  function reset() {
+  function clearBowl() {
     setBowlIndex(null);
     setSleepy(false);
     setFieryChicken(false);
     setGoldenChicken(false);
     setKnockedBottles([]);
-    setDuelLoss(false);
     A(0);
     U([]);
     R(0);
-    S("roll");
     Q(null);
     D([]);
     E("");
     T("ALL");
+    setServeResult(null);
+  }
+  function reset() {
+    clearBowl();
+    setRun(initialRun());
+    S("roll");
+  }
+  // Next customer in line: fresh bowl, same day, same coins, same hearts.
+  function nextCustomer() {
+    if (!canPlay) return;
+    beep();
+    clearBowl();
+    S("roll");
+  }
+  function persistBest(nextRun: ReturnType<typeof initialRun>) {
+    setBest((current) => {
+      const updated = recordRun(current, nextRun);
+      saveBest(updated);
+      return updated;
+    });
+  }
+  function serveContinueLabel() {
+    if (run.result === "gameover") return "FACE THE MUSIC";
+    if (run.result === "day-end") return "CLOSE UP SHOP";
+    if (run.result === "victory") return "TAKE A BOW";
+    return "NEXT CUSTOMER";
+  }
+  function continueAfterServe() {
+    if (!canPlay) return;
+    beep();
+    if (run.result === "gameover") {
+      persistBest(run);
+      S("gameover");
+    } else if (run.result === "day-end") {
+      persistBest(run);
+      S("day-end");
+    } else if (run.result === "victory") {
+      persistBest(run);
+      S("victory");
+    } else {
+      nextCustomer();
+    }
+  }
+  function openNextDay() {
+    if (!canPlay) return;
+    beep();
+    const next = startDay({ ...run, day: run.day + 1 });
+    setRun(next);
+    clearBowl();
+    E(`Day ${next.day}. ${CUSTOMERS_PER_DAY} customers, one dream. The regulars are already lining up.`);
+    S("roll");
   }
   const message = sleepy
     ? "Chef Kenji has dozed off. Wake him to continue."
@@ -666,7 +759,13 @@ export default function Home() {
                     : "Good bowl. Now, one last thing. You feeling lucky?"
                   : stage === "cookoff"
                     ? "Dario?! In MY market?! Show him what Worcester ramen really is, kid."
-                    : round?.winner === "player"
+                    : stage === "day-end"
+                      ? `Day ${run.day} in the books. Count the coins, mop the floor, rest those wrists.`
+                      : stage === "gameover"
+                        ? "The sign says CLOSED. Too many walkouts. Tomorrow is another day, kid."
+                        : stage === "victory"
+                          ? "Five days, kid. FIVE. You're a ramen legend of the 508 now."
+                          : round?.winner === "player"
                     ? "You got me, kid. That's a champion's bowl. Come back hungry."
                     : "The house wins. Your ramen's still good. Eat it before it gets cold.";
   return (
@@ -769,6 +868,13 @@ export default function Home() {
             <span>
               <i /> THE COUNTER
             </span>
+            <span
+              className="day-hud"
+              aria-label={`Day ${run.day}, customer ${run.customer} of ${CUSTOMERS_PER_DAY}, ${run.hearts} of ${MAX_HEARTS} hearts, ${run.totalCoins} coins earned`}
+            >
+              DAY {run.day} · {run.customer}/{CUSTOMERS_PER_DAY} · {"♥".repeat(run.hearts)}
+              <span className="muted">{"♥".repeat(MAX_HEARTS - run.hearts)}</span> · {run.totalCoins} COINS
+            </span>
             <button
               onClick={() =>
                 revealSecret(
@@ -809,7 +915,7 @@ export default function Home() {
             )}
           </div>
           {stage === "boss" ? (
-            <ChickenBoss onWin={bossWin} onLose={() => { E("Looks like you need more ramen! You're cooked buddy!"); S("over"); }} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
+            <ChickenBoss onWin={bossWin} onLose={chickenLose} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
           ) : (
             <Shop
               toppings={selected}
@@ -1099,8 +1205,8 @@ export default function Home() {
               <div className="result" role="status">
                 ABSOLUTE GOAT STATUS EARNED. YOU WIN.
               </div>
-              <button className="primary" onClick={reset}>
-                ANOTHER BOWL? <span>↻</span>
+              <button className="primary" onClick={continueAfterServe}>
+                {serveContinueLabel()} <span>→</span>
               </button>
               <p className="tiny">
                 Your bowl: shoyu,{" "}
@@ -1123,23 +1229,117 @@ export default function Home() {
             />
           ) : stage === "slosh" ? (
             <SloshRush onUnlock={discover} onExit={() => S("build")} />
+          ) : stage === "day-end" ? (
+            <>
+              <p className="eyebrow orange">DAY {run.day} COMPLETE</p>
+              <h2>
+                Shop&apos;s closed.
+                <br />
+                Bowls are empty.
+              </h2>
+              <div className="stars" role="img" aria-label={`${starsForDay(run.lostHearts)} out of 3 stars`}>
+                {"★".repeat(starsForDay(run.lostHearts))}
+                <span className="muted">{"★".repeat(3 - starsForDay(run.lostHearts))}</span>
+              </div>
+              <p className="description">
+                {run.served} of {CUSTOMERS_PER_DAY} customers served · {run.perfect} perfect bowls · {run.lostHearts} walkout{run.lostHearts === 1 ? "" : "s"}
+              </p>
+              <div className="result" role="status">
+                +{run.coins} COINS TODAY
+              </div>
+              <p className="tiny">
+                BEST: DAY {best.day} · {best.coins} COINS IN A DAY · {best.bowls} BOWLS ALL TIME
+              </p>
+              <button className="primary" onClick={openNextDay}>
+                OPEN FOR DAY {run.day + 1} <span>→</span>
+              </button>
+            </>
+          ) : stage === "gameover" ? (
+            <>
+              <p className="eyebrow orange">THE SHOP CLOSES EARLY</p>
+              <h2>
+                Too many
+                <br />
+                walkouts.
+              </h2>
+              <p className="description">
+                Three unhappy customers in one day, and word travels fast on Shrewsbury Street. Kenji flips the sign to CLOSED.
+              </p>
+              <div className="result" role="status">
+                DAY {run.day} · {run.totalCoins} COINS EARNED
+              </div>
+              <p className="tiny">
+                BEST: DAY {best.day} · {best.coins} COINS IN A DAY · {best.bowls} BOWLS ALL TIME
+              </p>
+              <button className="primary" onClick={reset}>
+                TRY AGAIN <span>↻</span>
+              </button>
+            </>
+          ) : stage === "victory" ? (
+            <>
+              <p className="eyebrow orange">FIVE DAYS. ZERO REGRETS.</p>
+              <h2>
+                Ramen legend
+                <br />
+                of the 508.
+              </h2>
+              <p className="description">
+                Five straight days of slinging bowls at Worcester Public Market. Kenji hangs your photo next to the health inspection certificate.
+              </p>
+              <div className="result" role="status">
+                {run.totalServed} BOWLS SERVED · {run.totalCoins} COINS EARNED
+              </div>
+              <p className="tiny">
+                {run.totalPerfect} PERFECT BOWLS · BEST SINGLE DAY: {best.coins} COINS
+              </p>
+              <button className="primary" onClick={reset}>
+                RUN IT BACK <span>↻</span>
+              </button>
+            </>
+          ) : stage === "over" ? (
+            <>
+              <p className="eyebrow orange">THE COUNTER HAS SPOKEN</p>
+              <h2>
+                {serveResult?.kind === "duel-win"
+                  ? "Served with style."
+                  : serveResult?.kind === "duel-draw"
+                    ? "A legendary draw."
+                    : serveResult?.kind === "chicken-loss"
+                      ? "Outfoxed by poultry."
+                      : "The customer walks out."}
+              </h2>
+              <p className="description">
+                {serveResult?.kind === "duel-win"
+                  ? "You beat Chef Kenji at his own game. The customer is already telling their friends."
+                  : serveResult?.kind === "duel-draw"
+                    ? "All 52 cards tied. Even Chef is impressed, and the customer pays full price."
+                    : serveResult?.kind === "chicken-loss"
+                      ? "The wild chicken defends its turf. No bowl, no pay, one unhappy customer."
+                      : "Chef Kenji takes the duel. The customer leaves hungry and tells Yelp."}
+              </p>
+              <div className="result" role="status">
+                {serveResult && serveResult.earned !== undefined
+                  ? `✦ +${serveResult.earned} COINS`
+                  : run.result === "gameover"
+                    ? "✦ NO HEARTS LEFT"
+                    : `✦ HEART LOST · ${run.hearts} LEFT`}
+              </div>
+              <button className="primary" onClick={continueAfterServe}>
+                {serveContinueLabel()} <span>→</span>
+              </button>
+              <p className="tiny">
+                Your bowl: shoyu, {selected.map((id) => (id === "ajitama" ? `${eggs} ajitama` : items.find((x) => x[0] === id)?.[1])).join(", ")}.
+              </p>
+            </>
           ) : (
             <>
               <p className="eyebrow orange">
-                {stage === "over"
-                  ? "THE COUNTER HAS SPOKEN"
-                  : "ONE BOWL. ONE SHOWDOWN."}
+                ONE BOWL. ONE SHOWDOWN.
               </p>
               <h2>
-                {stage === "over"
-                  ? round?.winner === "player"
-                    ? "You beat the chef!"
-                    : round?.winner === "draw"
-                      ? "A legendary draw."
-                      : "Chef takes the win."
-                  : round
-                    ? "A draw. Go again."
-                    : "Feeling lucky?"}
+                {round
+                  ? "A draw. Go again."
+                  : "Feeling lucky?"}
               </h2>
               <p className="description">
                 One shared 52-card deck. High card wins.
@@ -1183,28 +1383,11 @@ export default function Home() {
               <div className="deck-note">
                 {deck.length} CARDS LEFT IN THE DECK
               </div>
-              {stage === "over" ? (
-                <>
-                  <div className="result" role="status">
-                    {round?.winner === "player"
-                      ? "✦ LUCKY HANDS. LEGENDARY BOWL."
-                      : round?.winner === "draw"
-                        ? "ALL 52 CARDS TIED. EVEN CHEF IS IMPRESSED."
-                        : "✦ THE CHEF WINS. THE RAMEN IS STILL YOURS."}
-                  </div>
-  <button className="primary" onClick={reset}>
-  {duelLoss ? "MY BAD, I JUST REALLY NEEDED RAMEN TODAY." : "ANOTHER BOWL?"} <span>↻</span>
-  </button>
-  </>
-  ) : (
-  <button className="primary" onClick={draw}>
-                  {round ? "DRAW AGAIN" : "DRAW YOUR CARDS"} <span>↗</span>
-                </button>
-              )}
+              <button className="primary" onClick={draw}>
+                {round ? "DRAW AGAIN" : "DRAW YOUR CARDS"} <span>↗</span>
+              </button>
               <p className="tiny">
-                {stage === "over"
-                  ? `Your bowl: shoyu, ${selected.map((id) => (id === "ajitama" ? `${eggs} ajitama` : items.find((x) => x[0] === id)?.[1])).join(", ")}.`
-                  : "No reshuffling. No jokers. No chef privileges."}
+                No reshuffling. No jokers. No chef privileges.
               </p>
             </>
           )}

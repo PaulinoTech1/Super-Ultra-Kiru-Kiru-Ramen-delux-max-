@@ -13,6 +13,9 @@ export function thirdStep(stage) {
   if (stage === 'duel' || stage === 'over') return 'DUEL THE CHEF';
   if (stage === 'boss' || stage === 'boss-intro') return 'SECRET MINIBOSS';
   if (stage === 'goat') return 'ABSOLUTE GOAT';
+  if (stage === 'day-end') return 'DAY RESULTS';
+  if (stage === 'gameover') return 'CLOSED EARLY';
+  if (stage === 'victory') return 'RAMEN LEGEND';
   return '??';
 }
 export const CHEF_IDLE_MS = 30_000;

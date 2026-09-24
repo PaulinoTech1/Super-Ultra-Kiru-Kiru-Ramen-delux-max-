@@ -198,3 +198,9 @@ button{touch-action:manipulation}
   .slosh-tut-step-title{font-size:17px}
   .slosh-tut-card{padding:14px}
 }
+.day-hud{color:var(--cream);letter-spacing:1px;white-space:nowrap}
+.day-hud .muted{color:#5d6650}
+.scene-top{flex-wrap:wrap;gap:8px}
+.stars{font-size:26px;color:var(--orange);letter-spacing:6px;margin:6px 0 14px}
+.stars .muted{color:#4a5140}
+@media(max-width:680px){.day-hud{font-size:8px;white-space:normal}}
