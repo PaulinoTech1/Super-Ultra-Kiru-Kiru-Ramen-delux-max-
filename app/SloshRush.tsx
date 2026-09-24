@@ -50,6 +50,17 @@ const LENNY_FUMBLE_LINES = [
 ];
 const LENNY_CALM_LINE = "NO WAIT! Not the review! RIGHT drinks coming up, I swear!";
 const LENNY_HIT_LINE = "MY KEG! ...fine. Take the drink. Take all the drinks.";
+// Grabbing the cider itself sets Lenny off: insults, then the real story.
+const LENNY_CIDER_INSULTS = [
+  "Oh, grabbing the CIDER? Real cute. Real funny.",
+  "You think this is a joke?! Cider took EVERYTHING from me!",
+  "One summer my whole family drove out for cider. They never came back.",
+  "Mom, Dad, Uncle Sploosh... all gone. They chose the cider over ME.",
+  "The doctor said they were addicted. I said they were family. The cider won.",
+  "Every bubble in that bottle is a tiny reminder of what I lost.",
+  "Go ahead. Hold it. Hold my trauma right there in your hand.",
+  "You're gonna wave that around in front of me? Heartless. Cold-blooded.",
+];
 
 function pickLine(lines: string[]) {
   return lines[Math.floor(Math.random() * lines.length)];
@@ -142,10 +153,15 @@ export default function SloshRush({
 
   const doGrab = (key: number) => {
     const tnow = Date.now();
-    const next = grabDrink(gameRef.current, key, tnow);
-    if (next === gameRef.current) return;
+    const prev = gameRef.current;
+    const grabbed = prev.belt.find((b) => b.key === key);
+    const next = grabDrink(prev, key, tnow);
+    if (next === prev) return;
     gameRef.current = next;
     setGame(next);
+    if (grabbed && grabbed.drink === CIDER_ID) {
+      setLennyLine(pickLine(LENNY_CIDER_INSULTS));
+    }
   };
 
   const doServe = (key: number) => {

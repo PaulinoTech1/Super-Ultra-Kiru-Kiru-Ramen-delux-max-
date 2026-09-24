@@ -240,7 +240,7 @@ export default function SloshTutorial({
               {spillTaps === 0 ? "✓ Mopped!" : `💧 SPILL! Mop it! (${spillTaps}×)`}
             </button>
             <p className="slosh-hint">
-              Spills must be mopped <b>fast</b> (2 taps, 6 seconds) or <b>every
+              Spills must be mopped <b>fast</b> (2 taps, 9 seconds) or <b>every
               ticket</b> loses patience.
             </p>
           </div>
@@ -272,7 +272,7 @@ export default function SloshTutorial({
           <ul>
             <li>
               <b>⭐ THREATEN ONE-STAR REVIEW:</b> your panic button. Lenny sweats
-              and sends <b>only correct drinks</b> for 6 seconds. 25-second
+              and sends <b>only correct drinks</b> for 8 seconds. 25-second
               cooldown, so save it for a rough patch.
             </li>
             <li>
@@ -280,7 +280,9 @@ export default function SloshTutorial({
               it: <i>&ldquo;CIDER?! I DON&apos;T do cider!! FINE. But I&apos;m
               FURIOUS about it.&rdquo;</i> While a cider ticket is active his
               fumbles come <b>twice as fast</b>. Serve it or let it walk out to
-              calm him down.
+              calm him down. And if you grab a cider off the belt yourself,
+              he&apos;ll start insulting you. He&apos;s got <i>history</i> with
+              cider. Ask him about his family sometime. Actually, don&apos;t.
             </li>
           </ul>
           <p>

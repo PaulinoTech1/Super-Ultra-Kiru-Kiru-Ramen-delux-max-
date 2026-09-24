@@ -8,20 +8,20 @@ export const SHIFT_SECONDS = 90;
 export const SERVE_GOAL = 8;
 export const MAX_WALKOUTS = 3;
 export const MAX_TICKETS = 3;
-export const TICKET_PATIENCE_TICKS = 450; // 45s at 100ms ticks
+export const TICKET_PATIENCE_TICKS = 600; // 60s at 100ms ticks
 export const DRINK_SPAWN_TICKS = 17;
-export const BELT_SPEED = 4.5; // percent of belt width per tick
+export const BELT_SPEED = 3.0; // percent of belt width per tick
 export const REVIEW_COOLDOWN_MS = 25000;
-export const REVIEW_CALM_MS = 6000; // Lenny sends only correct drinks
-export const LENNY_EVENT_MIN_TICKS = 110;
-export const LENNY_EVENT_MAX_TICKS = 150;
+export const REVIEW_CALM_MS = 8000; // Lenny sends only correct drinks
+export const LENNY_EVENT_MIN_TICKS = 150;
+export const LENNY_EVENT_MAX_TICKS = 200;
 export const KEG_HP = 5;
-export const KEG_ROLL_SPEED = 3; // percent per tick toward the player
+export const KEG_ROLL_SPEED = 2.2; // percent per tick toward the player
 export const CRATE_TAPS = 3;
 export const SPILL_TAPS = 2;
-export const SPILL_TICKS = 60; // 6s to mop before it spreads
-export const SPILL_PATIENCE_HIT = 35;
-export const DAZE_MS = 2000;
+export const SPILL_TICKS = 90; // 9s to mop before it spreads
+export const SPILL_PATIENCE_HIT = 25;
+export const DAZE_MS = 1500;
 
 export const DRINKS = [
   { id: "ramune", name: "Ramune", glyph: "🫧", color: "#7dd3fc" },
@@ -37,8 +37,8 @@ export const DRINKS = [
 // Cider rage: if any active ticket wants cider, Lenny loses it and his
 // fumbles come twice as fast until the cider ticket is gone.
 export const CIDER_ID = "cider";
-export const CIDER_RAGE_EVENT_MIN_TICKS = 55;
-export const CIDER_RAGE_EVENT_MAX_TICKS = 85;
+export const CIDER_RAGE_EVENT_MIN_TICKS = 90;
+export const CIDER_RAGE_EVENT_MAX_TICKS = 130;
 
 export function isCiderRage(tickets) {
   return tickets.some((t) => t.drink === CIDER_ID);
@@ -94,7 +94,7 @@ export function initialShift() {
     spill: null, // { tapsLeft, ticksLeft }
     keg: null, // { x, hp }
     spawnIn: 8,
-    eventIn: 80, // first fumble comes early
+    eventIn: 110, // first fumble comes a little later now
     calmUntil: 0,
     reviewCooldownUntil: 0,
     dazedUntil: 0,
