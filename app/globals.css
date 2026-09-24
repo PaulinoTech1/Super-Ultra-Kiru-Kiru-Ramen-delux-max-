@@ -104,7 +104,10 @@
 .slosh-boss-id{display:flex;gap:10px;align-items:center}
 .slosh-lenny{font-size:40px}
 .slosh-boss-name{font-weight:800;letter-spacing:.06em}
-.slosh-lenny-line{font-style:italic;opacity:.85;max-width:280px}
+.slosh-lenny-line{font-style:italic;max-width:300px;background:#26262e;border:2px solid #6b7280;border-radius:14px;padding:8px 12px;transition:font-size .25s ease,padding .25s ease,border-color .25s ease,background .25s ease}
+.slosh-lenny-line.anger-1{font-size:16px;border-color:#d97706}
+.slosh-lenny-line.anger-2{font-size:19px;font-weight:700;border-color:#f97316;background:#3a2a1c}
+.slosh-lenny-line.anger-3{font-size:23px;font-weight:800;border-color:#ef4444;background:#431818;color:#fecaca;animation:boss-pulse .6s ease-in-out infinite}
 .slosh-goal{min-width:200px}
 .slosh-goal-label{font-weight:700;font-size:13px;letter-spacing:.04em;margin-bottom:4px}
 .slosh-goal-bar{display:flex;gap:4px}
@@ -148,7 +151,7 @@
 .slosh-review{background:#7c3aed;border:2px solid #a78bfa;color:#fff;font-weight:800;border-radius:10px;padding:10px 14px;cursor:pointer}
 .slosh-review:disabled{opacity:.5;cursor:not-allowed}
 .slosh-hint{font-size:12px;opacity:.7}
-@media(prefers-reduced-motion:reduce){.belt-drink{transition:none}.slosh-ticket.shake,.slosh-calm,.slosh-rage,.slosh-dazed,.slosh-lenny-visual.sweating{animation:none}}
+@media(prefers-reduced-motion:reduce){.belt-drink{transition:none}.slosh-ticket.shake,.slosh-calm,.slosh-rage,.slosh-dazed,.slosh-lenny-visual.sweating,.slosh-lenny-line.anger-3{animation:none}}
 
 /* ---- Touch-friendly boss fights (all viewports) ---- */
 button{touch-action:manipulation}

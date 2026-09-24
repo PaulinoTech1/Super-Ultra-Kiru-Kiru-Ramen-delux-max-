@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import SloshTutorial from "./SloshTutorial";
 import {
   CIDER_ID,
+  DRINKS,
   MAX_WALKOUTS,
   REVIEW_CALM_MS,
   SERVE_GOAL,
@@ -66,6 +67,26 @@ function pickLine(lines: string[]) {
   return lines[Math.floor(Math.random() * lines.length)];
 }
 
+// Lenny's ambient paranoia: nothing is actually discontinued. He just says it.
+// The longer the shift runs, the more items he claims are gone.
+function discontinuedGrumble(elapsedMs: number, rand: () => number = Math.random) {
+  const pool = DRINKS.map((d) => d.name);
+  const count = Math.min(3, 1 + Math.floor(elapsedMs / 30000));
+  const names: string[] = [];
+  for (let i = 0; i < count && pool.length; i++) {
+    names.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
+  }
+  const list = names.join(", ");
+  const templates = [
+    `They discontinued ${list}, you know. Corporate decision.`,
+    `${list}? Discontinued. Don't shoot the messenger.`,
+    `Heard ${list} got discontinued. Tragic. Anyway.`,
+    `Pretty sure ${list} ${count > 1 ? "are" : "is"} discontinued now. Everything's discontinued if you think about it.`,
+    `No more ${list}. They took it off the truck. I saw the memo. There was no memo.`,
+  ];
+  return templates[Math.floor(rand() * templates.length)];
+}
+
 export default function SloshRush({
   onUnlock,
   onExit,
@@ -83,6 +104,17 @@ export default function SloshRush({
   const announced = useRef(false);
   const fumbleWasActive = useRef(false);
   const seenTickets = useRef<Set<number>>(new Set());
+  // Lines said through say() with an importance window block Lenny's ambient
+  // discontinued-rambling until the window expires, so gameplay signals win.
+  const importantUntil = useRef(0);
+  const shiftStartAt = useRef(Date.now());
+
+  // Say a line, optionally reserving the speech bubble for importantMs so the
+  // ambient grumbler doesn't talk over gameplay signals.
+  const say = (line: string, importantMs = 0) => {
+    setLennyLine(line);
+    importantUntil.current = Date.now() + importantMs;
+  };
 
   useEffect(() => {
     gameRef.current = game;
@@ -92,12 +124,14 @@ export default function SloshRush({
     announced.current = false;
     fumbleWasActive.current = false;
     seenTickets.current = new Set();
+    importantUntil.current = 0;
+    shiftStartAt.current = Date.now();
     const fresh = initialShift();
     gameRef.current = fresh;
     setGame(fresh);
     setNow(Date.now());
     setShakeTicket(null);
-    setLennyLine("First delivery! Only... slightly wrong!");
+    say("First delivery! Only... slightly wrong!", 5000);
     setPhase("shift");
   };
 
@@ -123,13 +157,13 @@ export default function SloshRush({
 
   useEffect(() => {
     const fumbleActive = !!(game.crate || game.spill || game.keg);
-    if (fumbleActive && !fumbleWasActive.current) setLennyLine(pickLine(LENNY_FUMBLE_LINES));
+    if (fumbleActive && !fumbleWasActive.current) say(pickLine(LENNY_FUMBLE_LINES), 5000);
     fumbleWasActive.current = fumbleActive;
   }, [game.crate, game.spill, game.keg]);
 
   useEffect(() => {
     if (phase === "shift" && now < game.calmUntil && lennyLine !== LENNY_CALM_LINE) {
-      setLennyLine(LENNY_CALM_LINE);
+      say(LENNY_CALM_LINE, 8000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, game.calmUntil]);
@@ -139,10 +173,25 @@ export default function SloshRush({
     for (const t of game.tickets) {
       if (t.drink === CIDER_ID && !seenTickets.current.has(t.key)) {
         seenTickets.current.add(t.key);
-        setLennyLine("CIDER?! I DON'T do cider!! FINE. But I'm FURIOUS about it.");
+        say("CIDER?! I DON'T do cider!! FINE. But I'm FURIOUS about it.", 6000);
       }
     }
   }, [phase, game.tickets]);
+
+  // Ambient grumbling: when nothing important is happening, Lenny rambles
+  // about discontinued drinks. Nothing is actually discontinued.
+  useEffect(() => {
+    if (phase !== "shift") return;
+    const timer = setInterval(() => {
+      const tnow = Date.now();
+      const g = gameRef.current;
+      if (g.result) return;
+      if (tnow < g.calmUntil) return;
+      if (tnow < importantUntil.current) return;
+      say(discontinuedGrumble(tnow - shiftStartAt.current), 0);
+    }, 11000);
+    return () => clearInterval(timer);
+  }, [phase]);
 
   useEffect(
     () => () => {
@@ -160,7 +209,7 @@ export default function SloshRush({
     gameRef.current = next;
     setGame(next);
     if (grabbed && grabbed.drink === CIDER_ID) {
-      setLennyLine(pickLine(LENNY_CIDER_INSULTS));
+      say(pickLine(LENNY_CIDER_INSULTS), 6000);
     }
   };
 
@@ -174,7 +223,7 @@ export default function SloshRush({
       setShakeTicket(key);
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
       shakeTimer.current = setTimeout(() => setShakeTicket(null), 450);
-      setLennyLine("That ain't what they ordered!");
+      say("That ain't what they ordered!", 4000);
     }
   };
 
@@ -191,7 +240,7 @@ export default function SloshRush({
     if (next === gameRef.current) return;
     gameRef.current = next;
     setGame(next);
-    if (!next.crate) setLennyLine("Fine! Taking it back! ...it was the right crate. Probably.");
+    if (!next.crate) say("Fine! Taking it back! ...it was the right crate. Probably.", 4000);
   };
 
   const doSpill = () => {
@@ -199,7 +248,7 @@ export default function SloshRush({
     if (next === gameRef.current) return;
     gameRef.current = next;
     setGame(next);
-    if (!next.spill) setLennyLine("Mopped! See? Good as new. Mostly.");
+    if (!next.spill) say("Mopped! See? Good as new. Mostly.", 4000);
   };
 
   const doKeg = () => {
@@ -207,7 +256,7 @@ export default function SloshRush({
     if (next === gameRef.current) return;
     gameRef.current = next;
     setGame(next);
-    if (burst) setLennyLine(LENNY_HIT_LINE);
+    if (burst) say(LENNY_HIT_LINE, 5000);
   };
 
   const doReview = () => {
@@ -274,6 +323,12 @@ export default function SloshRush({
   const calmed = now < game.calmUntil;
   const dazed = now < game.dazedUntil;
   const ciderRage = isCiderRage(game.tickets);
+  // Lenny's anger: cider rage, walkouts, and active fumbles all feed it.
+  // The speech bubble grows (and pulses at max) so his mood is hard to miss.
+  const anger = Math.min(
+    3,
+    (ciderRage ? 1 : 0) + game.walkouts + (game.crate || game.spill || game.keg ? 1 : 0),
+  );
   const reviewCooldown = Math.max(0, Math.ceil((game.reviewCooldownUntil - now) / 1000));
   const clock = Math.max(0, Math.ceil(game.ticksLeft / 10));
   const heldDrink = game.held ? drinkById(game.held) : null;
@@ -285,7 +340,7 @@ export default function SloshRush({
           <span className="slosh-lenny" aria-hidden="true">🚚</span>
           <div>
             <div className="slosh-boss-name">LENNY · SLOSH &amp; SONS</div>
-            <div className="slosh-lenny-line" aria-live="polite">{lennyLine}</div>
+            <div className={`slosh-lenny-line anger-${anger}`} aria-live="polite">{lennyLine}</div>
           </div>
         </div>
         <div className="slosh-goal">

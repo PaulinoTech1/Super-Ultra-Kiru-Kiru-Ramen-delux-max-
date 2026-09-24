@@ -284,6 +284,13 @@ export default function SloshTutorial({
               he&apos;ll start insulting you. He&apos;s got <i>history</i> with
               cider. Ask him about his family sometime. Actually, don&apos;t.
             </li>
+            <li>
+              <b>🗣️ LENNY RAMBLES:</b> as the shift wears on he&apos;ll claim
+              random drinks are <b>discontinued</b>. Nothing is actually
+              discontinued, and the longer the shift runs the more items he
+              insists are gone. He&apos;s just like that. His speech bubble
+              also gets bigger the angrier he gets, so you can&apos;t miss it.
+            </li>
           </ul>
           <p>
             That&apos;s everything. Grab drinks, match tickets, smack Lenny&apos;s
