@@ -135,7 +135,9 @@ export default function DarioDuel({
     window.setTimeout(() => {
       if (pw >= COOKOFF_WINS_NEEDED || dw >= COOKOFF_WINS_NEEDED) {
         if (pw >= COOKOFF_WINS_NEEDED) onUnlock("market-king");
-        onDuelEnd?.(pw >= COOKOFF_WINS_NEEDED ? "player" : "dario");
+        // Show the duel-end result screen first. The parent only advances
+        // (finalWin/finalLose) when the player taps through, so a loss with
+        // hearts left can never silently reset the duel.
         setPhase("duelEnd");
       } else {
         const names = [...usedNames, order.name];
@@ -426,9 +428,25 @@ export default function DarioDuel({
               </p>
             </>
           )}
-          <button className="primary" type="button" onClick={rematch}>
-            REMATCH <span>↻</span>
-          </button>
+          {onDuelEnd ? (
+            <button
+              className="primary"
+              type="button"
+              onClick={() =>
+                onDuelEnd(playerWins >= COOKOFF_WINS_NEEDED ? "player" : "dario")
+              }
+            >
+              {playerWins >= COOKOFF_WINS_NEEDED ? (
+                <>TAKE A BOW <span>→</span></>
+              ) : (
+                <>FACE THE MUSIC <span>→</span></>
+              )}
+            </button>
+          ) : (
+            <button className="primary" type="button" onClick={rematch}>
+              REMATCH <span>↻</span>
+            </button>
+          )}
           <p className="tiny">
             <button className="linklike" type="button" onClick={onExit}>
               Back to the shop.
