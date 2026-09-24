@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import SloshTutorial from "./SloshTutorial";
 import {
   CIDER_ID,
   MAX_WALKOUTS,
@@ -39,7 +40,7 @@ type Game = {
   result: "win" | "lose" | null;
   nextKey: number;
 };
-type Phase = "intro" | "shift" | "end";
+type Phase = "intro" | "tutorial" | "shift" | "end";
 
 const LENNY_FUMBLE_LINES = [
   "Oops! Wrong crate! ...you didn't see anything.",
@@ -211,22 +212,24 @@ export default function SloshRush({
         <p className="boss-tagline">&ldquo;We&apos;ll get it there... eventually.&rdquo;</p>
         <div className="boss-brief">
           <p>Business is booming and Lenny is your distributor. Problem: Lenny. All drinks are non-alcoholic Japanese sodas and teas.</p>
-          <ul>
-            <li>Tap drinks on the belt to grab them, then tap a ticket to serve the matching drink.</li>
-            <li>Shove wrong crates back, mop his spills, and stop the mystery kegs. Bust one open for a free drink.</li>
-            <li>Threaten a one-star review and Lenny panics into sending only correct drinks.</li>
-            <li>If a customer orders the cider... brace yourself. Lenny HATES the cider.</li>
-          </ul>
           <p>Serve {SERVE_GOAL} drinks in {SHIFT_SECONDS} seconds. {MAX_WALKOUTS} walkouts and the shift is a disaster.</p>
+          <p>New here? Run the training shift first. It walks you through every tap.</p>
         </div>
-        <button className="accept-btn" type="button" onClick={startShift}>
-          CLOCK IN
+        <button className="accept-btn" type="button" onClick={() => setPhase("tutorial")}>
+          SHOW ME THE ROPES
+        </button>
+        <button className="linklike" type="button" onClick={startShift}>
+          I know the drill. Clock in.
         </button>
         <button className="linklike" type="button" onClick={onExit}>
           Not today. Back to the counter.
         </button>
       </div>
     );
+  }
+
+  if (phase === "tutorial") {
+    return <SloshTutorial onDone={startShift} onExit={onExit} />;
   }
 
   if (phase === "end") {
