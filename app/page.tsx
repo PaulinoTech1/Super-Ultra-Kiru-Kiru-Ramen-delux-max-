@@ -331,7 +331,11 @@ export default function Home() {
     });
   }
   function revealSecret(text: string, discovery?: string) {
-    if (!canPlay) return;
+    if (!canPlay) {
+      // Secrets still count while Kenji naps: wake him and grant the
+      // discovery instead of silently swallowing the attempt.
+      setSleepy(false);
+    }
     if (discovery) discover(discovery);
     E(text);
   }
