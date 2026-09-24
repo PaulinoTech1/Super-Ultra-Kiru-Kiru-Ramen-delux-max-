@@ -101,13 +101,21 @@ export function startDay(run, maxHearts = MAX_HEARTS) {
 // Coins for one bowl. `selected` is the topping id list ("ajitama" counts once).
 // `bonus` adds a flat tip (rushers served fast); `halve` is the critic's
 // punishment for a lazy bowl.
-export function bowlPayout(selected, { duelWon = false, goatWon = false, bonus = 0, halve = false } = {}) {
-  let pay = BASE_PAY + TIP_PER_TOPPING * selected.length;
-  if (duelWon) pay += DUEL_WIN_BONUS;
-  if (goatWon) pay += GOAT_BONUS;
-  pay += bonus;
-  if (halve) pay = Math.floor(pay / 2);
-  return pay;
+// Itemized receipt for a bowl payout. Shown at checkout so the player can see
+// where the coins came from.
+export function bowlPayoutBreakdown(selected, { duelWon = false, goatWon = false, bonus = 0, halve = false } = {}) {
+  const toppingCount = selected.length;
+  const base = BASE_PAY;
+  const tips = TIP_PER_TOPPING * toppingCount;
+  const duelBonus = duelWon ? DUEL_WIN_BONUS : 0;
+  const goatBonus = goatWon ? GOAT_BONUS : 0;
+  const subtotal = base + tips + duelBonus + goatBonus + bonus;
+  const total = halve ? Math.floor(subtotal / 2) : subtotal;
+  return { base, tips, toppingCount, duelBonus, goatBonus, bonus, halved: halve, total };
+}
+
+export function bowlPayout(selected, opts = {}) {
+  return bowlPayoutBreakdown(selected, opts).total;
 }
 
 function advance(run) {
@@ -119,7 +127,8 @@ function advance(run) {
 
 // A happy customer pays up and the line moves on.
 export function serveBowl(run, selected, opts = {}) {
-  const earned = bowlPayout(selected, opts);
+  const payout = bowlPayoutBreakdown(selected, opts);
+  const earned = payout.total;
   const perfect = opts.duelWon || opts.goatWon ? 1 : 0;
   const next = {
     ...run,
@@ -130,7 +139,7 @@ export function serveBowl(run, selected, opts = {}) {
     totalServed: run.totalServed + 1,
     totalPerfect: run.totalPerfect + perfect,
   };
-  return { run: advance(next), earned };
+  return { run: advance(next), earned, payout };
 }
 
 // An unhappy customer costs a heart. Zero hearts closes the shop early.

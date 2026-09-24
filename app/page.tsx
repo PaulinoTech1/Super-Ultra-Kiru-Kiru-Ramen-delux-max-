@@ -26,6 +26,7 @@ import {
   initialRun,
   startDay,
   serveBowl,
+  bowlPayoutBreakdown,
   loseCustomer,
   spendCoins,
   starsForDay,
@@ -67,6 +68,18 @@ const challengeGuide: Record<string, string> = {
   nuke: "During any boss fight, press the nuke button (300 coins) to end the boss and restart at day 1.",
   "boss-slayer": "On day 5, serve the first four customers, then beat Chef Dario in the final cookoff rematch.",
 };
+// One-line itemized receipt for the serve result screen: only non-zero parts.
+function payoutLine(p: ReturnType<typeof bowlPayoutBreakdown>): string {
+  const parts = [
+    `BASE ${p.base}`,
+    `TIPS ${p.tips}${p.toppingCount > 0 ? ` (${p.toppingCount})` : ""}`,
+  ];
+  if (p.duelBonus > 0) parts.push(`DUEL WIN +${p.duelBonus}`);
+  if (p.goatBonus > 0) parts.push(`GOAT +${p.goatBonus}`);
+  if (p.bonus > 0) parts.push(`BONUS +${p.bonus}`);
+  if (p.halved) parts.push("HALVED BY CRITIC");
+  return parts.join(" · ");
+}
 function Shop({
   toppings,
   eggs,
@@ -381,7 +394,7 @@ export default function Home() {
     [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS }),
     [splashFx, setSplashFx] = useState(0),
     [run, setRun] = useState<RunState>(() => initialRun(heartsForDifficulty("normal"))),
-    [serveResult, setServeResult] = useState<{ kind: string; earned?: number } | null>(null),
+    [serveResult, setServeResult] = useState<{ kind: string; earned?: number; payout?: ReturnType<typeof bowlPayoutBreakdown> } | null>(null),
     [best, setBest] = useState({ day: 0, coins: 0, bowls: 0 }),
     [discoveries, setDiscoveries] = useState<string[]>([]),
     [discoveryToast, setDiscoveryToast] = useState<string | null>(null),
@@ -865,9 +878,9 @@ export default function Home() {
   function bossWin() {
     discover("goat");
     const withNoodles = selected.includes("noodles") ? selected : [...selected, "noodles"];
-    const { run: next, earned } = serveBowl(run, withNoodles, { goatWon: true, ...payoutOpts() });
+    const { run: next, earned, payout } = serveBowl(run, withNoodles, { goatWon: true, ...payoutOpts() });
     setRun(next);
-    setServeResult({ kind: "goat", earned });
+    setServeResult({ kind: "goat", earned, payout });
     U(withNoodles);
     E("");
     serveFanfare();
@@ -969,16 +982,16 @@ export default function Home() {
     D(result.remaining);
     Q(result);
     if (result.winner === "player") {
-      const { run: next, earned } = serveBowl(run, selected, { duelWon: true, ...payoutOpts() });
+      const { run: next, earned, payout } = serveBowl(run, selected, { duelWon: true, ...payoutOpts() });
       setRun(next);
-      setServeResult({ kind: "duel-win", earned });
+      setServeResult({ kind: "duel-win", earned, payout });
       E(`The customer is delighted. +${earned} coins. Chef Kenji nods approvingly.`);
       serveFanfare();
       S("over");
     } else if (result.winner === "draw") {
-      const { run: next, earned } = serveBowl(run, selected, { ...payoutOpts() });
+      const { run: next, earned, payout } = serveBowl(run, selected, { ...payoutOpts() });
       setRun(next);
-      setServeResult({ kind: "duel-draw", earned });
+      setServeResult({ kind: "duel-draw", earned, payout });
       E(`All 52 cards tied. The customer calls it a legendary meal. +${earned} coins.`);
       serveFanfare();
       S("over");
@@ -1868,7 +1881,12 @@ export default function Home() {
               </p>
               <div className="result" role="status">
                 {serveResult && serveResult.earned !== undefined
-                  ? `✦ +${serveResult.earned} COINS`
+                  ? <>
+                      {`✦ +${serveResult.earned} COINS`}
+                      {serveResult.payout
+                        ? <div className="payout-breakdown">{payoutLine(serveResult.payout)}</div>
+                        : null}
+                    </>
                   : run.result === "gameover"
                     ? "✦ NO HEARTS LEFT"
                     : `✦ HEART LOST · ${run.hearts} LEFT`}
