@@ -172,6 +172,8 @@ button{touch-action:manipulation}
 .slosh-tut-done{color:#7fd08a;font-weight:700}
 .slosh-tut-fumble{margin:12px 0;padding:10px;border:1px dashed #5a5344;border-radius:8px}
 .slosh-tut-fumble .slosh-hint{margin:8px 0 0}
+.slosh-tut-fumble .slosh-crate{position:static;inset:auto;z-index:auto;width:100%;padding:12px;margin:0 0 4px}
+.slosh-tut-fumble .slosh-keg{position:relative;top:auto;left:auto;transform:none;z-index:auto;width:100%;padding:12px;background:#2a2a33;border:2px solid #888;border-radius:10px;font-size:15px;font-weight:700;color:var(--cream)}
 .slosh-tut .slosh-crate:disabled,.slosh-tut .slosh-spill:disabled,.slosh-tut .slosh-keg:disabled{opacity:.85;cursor:default}
 .slosh-tut-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px}
 .slosh-tut-nexthint{font-size:12px;color:var(--orange);text-align:center;margin:0 0 10px}
