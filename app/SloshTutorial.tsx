@@ -45,6 +45,15 @@ export default function SloshTutorial({
     </div>
   );
 
+  const nextHint =
+    !canNext && step === 1
+      ? "↑ Tap the Ramune drink on the belt first, then NEXT unlocks."
+      : !canNext && step === 2
+        ? "↑ Tap the Ramune ticket to serve it, then NEXT unlocks."
+        : !canNext && step === 3
+          ? "↑ Handle all three of Lenny's fumbles above, then NEXT unlocks."
+          : null;
+
   const nav = (
     <div className="slosh-tut-nav">
       {step > 0 ? (
@@ -282,6 +291,7 @@ export default function SloshTutorial({
       )}
 
       {nav}
+      {nextHint && <p className="slosh-tut-nexthint">{nextHint}</p>}
       <button className="linklike" type="button" onClick={onExit}>
         Not today. Back to the counter.
       </button>
