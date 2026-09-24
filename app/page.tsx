@@ -338,6 +338,19 @@ function readStoredSettings(): Settings | null {
   }
 }
 
+// Stages where the player acts against the scene (timed or duel). On phones
+// these stages get a compacted layout so the controls fit near one screen.
+const ACTION_STAGES = new Set([
+  "build",
+  "duel",
+  "cookoff",
+  "slosh",
+  "boss",
+  "boss-intro",
+  "goat",
+  "final",
+]);
+
 export default function Home() {
   const [stage, S] = useState("roll"),
     [refusals, R] = useState(0),
@@ -1075,7 +1088,12 @@ export default function Home() {
                     ? "You got me, kid. That's a champion's bowl. Come back hungry."
                     : "The house wins. Your ramen's still good. Eat it before it gets cold.";
   return (
-    <main>
+    <main
+      data-stage={stage}
+      data-action={ACTION_STAGES.has(stage) ? "true" : "false"}
+      data-sleepy={sleepy ? "true" : "false"}
+      data-secret={secret ? "true" : "false"}
+    >
       <header>
         <Link
           className="brand"
@@ -1866,6 +1884,22 @@ export default function Home() {
         <button onClick={() => H(!help)} aria-expanded={help}>
           HOW TO PLAY ↗
         </button>
+        <span className="mobile-secrets">
+          <button
+            type="button"
+            onClick={() => revealSecret("The 508 is home base: a little city, a big heart, and a bowl worth talking about.", "sign")}
+            aria-label="Reveal the 508 ramen secret"
+          >
+            ✦ 508
+          </button>
+          <button
+            type="button"
+            onClick={() => revealSecret("Find us at Worcester Public Market. Good ramen, good people, no shortcuts.", "location")}
+            aria-label="Reveal the location secret"
+          >
+            ◈ WORCESTER, MA
+          </button>
+        </span>
         <span className="footer-note">NO DOWNLOADS. JUST NOODLES.</span>
       </footer>
       {help && (

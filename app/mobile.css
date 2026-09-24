@@ -50,7 +50,10 @@
   .food-icon { font-size: 18px; }
   .insistence { font-size: 7px; letter-spacing: .5px; }
   .primary { min-height: 44px; padding: 11px 8px; font-size: 8px; }
-  .game-layout > .panel { position: sticky; top: 8px; }
+  /* The panel must never be sticky: on phones it is taller than the
+     viewport, and a stuck panel traps its own bottom content (the primary
+     action button) where no amount of scrolling can reach it. */
+  .game-layout > .panel { position: static; }
   .scene-side .footnote { display: none; }
   .scene-top, .scene-bottom { gap: 8px; line-height: 1.5; flex-wrap: wrap; }
   .scene-top button, .scene-bottom button { font-size: 8px; }
@@ -117,4 +120,23 @@
   .slosh-ticket { padding: 14px 8px; }
   .slosh-ticket-glyph { font-size: 40px; }
   .slosh-review { min-height: 56px; font-size: 15px; }
+  /* Action stages (timed build/duel, boss fights): shrink the decorative
+     scene and collapse Kenji's flavor dialogue so the controls start
+     inside the first screen. The dialogue stays visible while Kenji is
+     asleep (it holds the wake button) or while a secret is showing. */
+  main[data-action="true"] .shop-wrap canvas,
+  main[data-stage="intro"] .shop-wrap canvas {
+    height: 148px;
+    width: auto;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  main[data-action="true"]:not([data-sleepy="true"]):not([data-secret="true"]) .dialogue {
+    display: none;
+  }
+  /* The 508 stamp and the location button are hidden with the desktop-only
+     hero/header on phones; surface both secrets in the footer instead so
+     all 21 challenges stay reachable on mobile. */
+  .mobile-secrets { display: flex; gap: 14px; }
+  .mobile-secrets button { font-size: 8px; letter-spacing: 1px; color: var(--orange); }
 }
