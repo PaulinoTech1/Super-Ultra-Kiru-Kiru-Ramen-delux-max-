@@ -141,7 +141,7 @@ export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, 
     <div className="boss-score">
       <span aria-label={`${hits} of ${targetHits} hits`}>{'◒'.repeat(hits)}{'○'.repeat(targetHits - hits)}</span>
       {isGolden && <span aria-label={`${GOLDEN_HEALTH_BOWLS - Math.ceil(playerHits / 2)} of ${GOLDEN_HEALTH_BOWLS} ramen bowls health`}> {Array.from({ length: GOLDEN_HEALTH_BOWLS }, (_, index) => index < GOLDEN_HEALTH_BOWLS - Math.ceil(playerHits / 2) ? '◉' : '○').join('')} HEALTH</span>}
-      <p role="status">{feedback}</p>
+      <p role="status" className="speech-bubble bubble-chicken">{feedback}</p>
     </div>
     <p className="tiny boss-controls">TAP TO AIM & THROW · ← → + SPACE ON KEYBOARD · UNLIMITED EGGS</p>
   </div>;

@@ -328,7 +328,7 @@ export default function DarioDuel({
               })}
             </div>
             {stunned && <p className="stun-flag" role="status">STUNNED!</p>}
-            <p className="taunt" aria-live="polite">&ldquo;{taunt}&rdquo;</p>
+            <p className="taunt speech-bubble bubble-dario" aria-live="polite">&ldquo;{taunt}&rdquo;</p>
           </div>
 
           <div className="ticket" role="status">
@@ -395,7 +395,7 @@ export default function DarioDuel({
             </div>
           )}
           {cornerNote && (
-            <p className="tiny corner-note" role="note">Kenji, from your corner: &ldquo;{cornerNote}&rdquo;</p>
+            <p className="tiny corner-note speech-bubble bubble-note" role="note">Kenji, from your corner: &ldquo;{cornerNote}&rdquo;</p>
           )}
         </div>
       )}

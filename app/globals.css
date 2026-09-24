@@ -104,10 +104,10 @@
 .slosh-boss-id{display:flex;gap:10px;align-items:center}
 .slosh-lenny{font-size:40px}
 .slosh-boss-name{font-weight:800;letter-spacing:.06em}
-.slosh-lenny-line{font-style:italic;max-width:300px;background:#26262e;border:2px solid #6b7280;border-radius:14px;padding:8px 12px;transition:font-size .25s ease,padding .25s ease,border-color .25s ease,background .25s ease}
+.slosh-lenny-line{font-style:italic;max-width:300px;transition:font-size .25s ease,padding .25s ease,border-color .25s ease,background-color .25s ease}
 .slosh-lenny-line.anger-1{font-size:16px;border-color:#d97706}
-.slosh-lenny-line.anger-2{font-size:19px;font-weight:700;border-color:#f97316;background:#3a2a1c}
-.slosh-lenny-line.anger-3{font-size:23px;font-weight:800;border-color:#ef4444;background:#431818;color:#fecaca;animation:boss-pulse .6s ease-in-out infinite}
+.slosh-lenny-line.anger-2{font-size:19px;font-weight:700;border-color:#f97316;--bubble-bg:#3a2a1c}
+.slosh-lenny-line.anger-3{font-size:23px;font-weight:800;border-color:#ef4444;--bubble-bg:#431818;color:#fecaca;animation:boss-pulse .6s ease-in-out infinite}
 .slosh-goal{min-width:200px}
 .slosh-goal-label{font-weight:700;font-size:13px;letter-spacing:.04em;margin-bottom:4px}
 .slosh-goal-bar{display:flex;gap:4px}
@@ -182,6 +182,18 @@ button{touch-action:manipulation}
 .slosh-tut-nexthint{font-size:12px;color:var(--orange);text-align:center;margin:0 0 10px}
 .slosh-tut-next{flex:0 1 auto}
 .slosh-tut-next:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---- Shared speech bubbles ---- */
+.speech-bubble{--bubble-bg:#26262e;position:relative;background:var(--bubble-bg);border:2px solid #6b7280;border-radius:14px;padding:10px 14px;margin-top:12px}
+.speech-bubble::before,.speech-bubble::after{content:"";position:absolute;left:26px;border-style:solid;border-color:transparent;border-top:0;pointer-events:none}
+.speech-bubble::before{top:-11px;margin-left:-11px;border-width:11px;border-top-width:0;border-bottom-color:inherit}
+.speech-bubble::after{top:-6px;margin-left:-8px;border-width:8px;border-top-width:0;border-bottom-color:var(--bubble-bg)}
+.speech-bubble.bubble-kenji{border-color:#d97706;--bubble-bg:#2e2a20;color:#f3e3c2}
+.speech-bubble.bubble-dario{border-color:#ef4444;--bubble-bg:#431818;color:#fecaca;font-weight:700}
+.speech-bubble.bubble-note{border-color:#38bdf8;--bubble-bg:#1c2a38;color:#d8ecff}
+.speech-bubble.bubble-chicken{border-color:#facc15;--bubble-bg:#2e2a12;color:#fde68a}
+/* Spots whose own selectors pin the margin need the bubble's tail room. */
+.dialogue .speech-bubble,.boss-score .speech-bubble{margin-top:12px}
 @media(max-width:680px){
   .slosh-tut-step-title{font-size:17px}
   .slosh-tut-card{padding:14px}

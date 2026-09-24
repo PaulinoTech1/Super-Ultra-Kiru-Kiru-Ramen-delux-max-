@@ -773,7 +773,7 @@ export default function Home() {
               <p className="eyebrow">
                 CHEF KENJI <span className="muted">/ CHIEF RAMEN OFFICER</span>
               </p>
-              <p>“{secret || message}”</p>
+              <p className="speech-bubble bubble-kenji">“{secret || message}”</p>
               {sleepy && <button className="wake-button" type="button" aria-label="Wake Chef Kenji" onClick={(event) => { event.stopPropagation(); wakeChef(); }}>Wake Chef Kenji →</button>}
               {secret && (
                 <button className="text-button" onClick={() => canPlay && E("")}>

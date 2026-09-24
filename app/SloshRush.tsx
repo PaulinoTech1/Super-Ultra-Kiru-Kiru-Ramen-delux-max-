@@ -340,7 +340,7 @@ export default function SloshRush({
           <span className="slosh-lenny" aria-hidden="true">🚚</span>
           <div>
             <div className="slosh-boss-name">LENNY · SLOSH &amp; SONS</div>
-            <div className={`slosh-lenny-line anger-${anger}`} aria-live="polite">{lennyLine}</div>
+            <div className={`slosh-lenny-line speech-bubble anger-${anger}`} aria-live="polite">{lennyLine}</div>
           </div>
         </div>
         <div className="slosh-goal">
