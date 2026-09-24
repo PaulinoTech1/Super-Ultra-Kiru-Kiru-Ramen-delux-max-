@@ -5,18 +5,19 @@ import { BOSS_HITS, FIERY_BOSS_HITS, GOLDEN_BOSS_HITS, GOLDEN_PLAYER_HITS, GOLDE
 
 type Shot = { x: number; y: number; started: number };
 
-export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, isGolden = false }: { onWin: () => void; onLose?: () => void; onThrow: () => void; isOnFire?: boolean; isGolden?: boolean }) {
+export default function ChickenBoss({ onWin, onLose, onThrow, onHit, isOnFire = false, isGolden = false }: { onWin: () => void; onLose?: () => void; onThrow: () => void; onHit?: () => void; isOnFire?: boolean; isGolden?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const win = useRef(onWin);
   const sound = useRef(onThrow);
+  const hitSound = useRef(onHit);
   const lose = useRef(onLose);
-  const game = useRef({ time: 0, hits: 0, playerHits: 0, aim: 320, shot: null as Shot | null, enemyEgg: null as { started: number; x: number } | null, flash: 0, hit: false, done: false });
+  const game = useRef({ time: 0, hits: 0, playerHits: 0, aim: 320, shot: null as Shot | null, enemyEgg: null as { started: number; x: number } | null, flash: 0, shake: 0, hit: false, done: false });
   const targetHits = isGolden ? GOLDEN_BOSS_HITS : isOnFire ? FIERY_BOSS_HITS : BOSS_HITS;
   const [hits, setHits] = useState(0);
   const [playerHits, setPlayerHits] = useState(0);
   const [feedback, setFeedback] = useState(isGolden ? 'The golden chicken fights back with electric eggs!' : 'A wild chicken escaped onto Shrewsbury Street!');
 
-  useEffect(() => { win.current = onWin; lose.current = onLose; sound.current = onThrow; }, [onWin, onLose, onThrow]);
+  useEffect(() => { win.current = onWin; lose.current = onLose; sound.current = onThrow; hitSound.current = onHit; }, [onWin, onLose, onThrow, onHit]);
   useEffect(() => {
     const context = canvas.current?.getContext('2d');
     if (!context) return;
@@ -43,6 +44,8 @@ export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, 
         g.playerHits += 1;
         setPlayerHits(g.playerHits);
         g.enemyEgg = null;
+        g.shake = g.time + 0.2;
+        hitSound.current?.();
         setFeedback(g.playerHits >= GOLDEN_PLAYER_HITS ? "Looks like you need more ramen! You're cooked buddy!" : `Electric egg hit! ${GOLDEN_PLAYER_HITS - g.playerHits} hits left.`);
         if (g.playerHits >= GOLDEN_PLAYER_HITS) { g.done = true; lose.current?.(); return; }
       }
@@ -50,12 +53,21 @@ export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, 
         g.hit = eggHitsChicken(g.shot.x, g.shot.y, g.time);
         g.hits = scoreEgg(g.hits, g.hit, targetHits);
         g.flash = g.time + 0.3;
+        if (g.hit) {
+          g.shake = g.time + 0.25;
+          hitSound.current?.();
+        }
         g.shot = null;
         setHits(g.hits);
         setFeedback(g.hit ? `${g.hits} of ${targetHits} hits! ${g.hits === targetHits ? 'ABSOLUTE GOAT. Order complete!' : 'Direct yolk!'}` : 'Miss! Lead the chicken a little. Unlimited eggs, keep throwing.');
         if (g.hits === targetHits) { g.done = true; win.current(); return; }
       }
       rect(0, 0, 640, 350, '#202c26');
+      context!.save();
+      if (g.shake > g.time) {
+        const k = (g.shake - g.time) / 0.25;
+        context!.translate((Math.random() - 0.5) * 14 * k, (Math.random() - 0.5) * 10 * k);
+      }
       for (let x = 0; x < 640; x += 48) {
         rect(x, 60, 42, 105, '#334435');
         rect(x + 4, 68, 4, 85, '#465440');
@@ -109,6 +121,12 @@ export default function ChickenBoss({ onWin, onLose, onThrow, isOnFire = false, 
         text(`RAMEN HEALTH ${GOLDEN_HEALTH_BOWLS - Math.ceil(g.playerHits / 2)}/${GOLDEN_HEALTH_BOWLS}`, 18, 347, 10, '#f3c94f');
       }
       if (isOnFire) text('HOT SAUCE CHICKEN', 245, 58, 12, '#ffb347');
+      context!.restore();
+      if (g.flash > g.time && g.hit) {
+        const a = Math.max(0, (g.flash - g.time) / 0.3) * 0.35;
+        context!.fillStyle = `rgba(255,240,200,${a.toFixed(3)})`;
+        context!.fillRect(0, 0, 640, 350);
+      }
       frame = requestAnimationFrame(animate);
     }
     frame = requestAnimationFrame(animate);

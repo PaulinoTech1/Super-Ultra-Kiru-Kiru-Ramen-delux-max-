@@ -17,6 +17,7 @@ import {
 import {
   CUSTOMERS_PER_DAY,
   MAX_HEARTS,
+  heartsForDifficulty,
   initialRun,
   startDay,
   serveBowl,
@@ -316,7 +317,26 @@ export default function Home() {
     [fieryChicken, setFieryChicken] = useState(false),
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
-    [run, setRun] = useState(initialRun),
+    [settings, setSettings] = useState(() => {
+      const fallback = { music: 80, sfx: 80, difficulty: "normal" };
+      if (typeof window === "undefined") return fallback;
+      try {
+        const raw = window.localStorage.getItem("kuru-kuru-settings");
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        const clampVol = (v: unknown, dflt: number) =>
+          Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Number(v))) : dflt;
+        return {
+          music: clampVol(parsed.music, 80),
+          sfx: clampVol(parsed.sfx, 80),
+          difficulty: ["easy", "normal", "hard"].includes(parsed.difficulty) ? parsed.difficulty : "normal",
+        };
+      } catch {
+        return fallback;
+      }
+    }),
+    [splashFx, setSplashFx] = useState(0),
+    [run, setRun] = useState(() => initialRun(heartsForDifficulty(settings.difficulty))),
     [serveResult, setServeResult] = useState<{ kind: string; earned?: number } | null>(null),
     [best, setBest] = useState(() => {
       if (typeof window === "undefined") return { day: 0, coins: 0, bowls: 0 };
@@ -329,6 +349,7 @@ export default function Home() {
     [discoveryToast, setDiscoveryToast] = useState<string | null>(null),
     [specialSign] = useState<string>(specialSigns[0]),
     [showChallenges, setShowChallenges] = useState(false),
+    [showSettings, setShowSettings] = useState(false),
     [hintPopupId, setHintPopupId] = useState<string | null>(null),
     [showIntroPopup, setShowIntroPopup] = useState(false);
   const discoveriesReady = useRef(true);
@@ -341,6 +362,18 @@ export default function Home() {
   useEffect(() => {
     if (discoveriesReady.current) saveDiscoveries(discoveries);
   }, [discoveries]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("kuru-kuru-settings", JSON.stringify(settings));
+    } catch { /* settings are optional */ }
+  }, [settings]);
+  const sfxLevel = Math.max(0, Math.min(100, settings.sfx)) / 100;
+  const musicLevel = Math.max(0, Math.min(100, settings.music)) / 100;
+  const heartsForDay = heartsForDifficulty(settings.difficulty);
+  const dialogTargetRef = useRef(0.16);
+  dialogTargetRef.current = 0.16 * musicLevel;
+  const musicLevelRef = useRef(0.8);
+  musicLevelRef.current = musicLevel;
   function discover(id: string) {
     setDiscoveries((current) => {
       if (current.includes(id)) return current;
@@ -420,7 +453,7 @@ export default function Home() {
       oscillator.type = "sine";
       oscillator.frequency.value = notes[index % notes.length];
       gain.gain.setValueAtTime(0.0001, audio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.018, audio.currentTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.018 * musicLevelRef.current), audio.currentTime + 0.04);
       gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.48);
       oscillator.connect(gain);
       gain.connect(audio.destination);
@@ -450,8 +483,8 @@ export default function Home() {
       }
       return ref.current;
     };
-    const boss = ensure(bossAudioRef, "/audio/boss-battle.ogg", 0.4);
-    const broth = ensure(brothAudioRef, "/audio/broth-loop.ogg", 0.1);
+    const boss = ensure(bossAudioRef, "/audio/boss-battle.ogg", 0.4 * musicLevelRef.current);
+    const broth = ensure(brothAudioRef, "/audio/broth-loop.ogg", 0.1 * musicLevelRef.current);
     const dialog = ensure(dialogAudioRef, "/audio/dialogue-loop.ogg", 0);
     const wantBoss = sound && bossStage;
     const wantBroth = sound && !bossStage && stage === "build";
@@ -468,9 +501,9 @@ export default function Home() {
     // Dialogue music fades in while someone is talking, out after 8s quiet.
     const fade = window.setInterval(() => {
       const talking = sound && !bossStage && Date.now() - lastDialogueRef.current < 8000;
-      const target = talking ? 0.16 : 0;
+      const target = talking ? dialogTargetRef.current : 0;
       const step = target > dialog.volume ? 0.04 : -0.04;
-      const next = Math.max(0, Math.min(0.16, dialog.volume + step));
+      const next = Math.max(0, Math.min(dialogTargetRef.current, dialog.volume + step));
       dialog.volume = next;
       if (next > 0 && dialog.paused) void dialog.play().catch(() => {});
       else if (next === 0 && !dialog.paused) dialog.pause();
@@ -482,6 +515,55 @@ export default function Home() {
       dialog.pause();
     };
   }, [sound, stage]);
+  // Keep loop volumes riding the music slider without restarting the loops.
+  useEffect(() => {
+    if (bossAudioRef.current) bossAudioRef.current.volume = 0.4 * musicLevel;
+    if (brothAudioRef.current) brothAudioRef.current.volume = 0.1 * musicLevel;
+  }, [musicLevel]);
+  // Sizzle bed under the build stage: looped filtered noise, gain rides the SFX slider.
+  const sizzleRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
+  useEffect(() => {
+    const live = sizzleRef.current;
+    if (!sound) {
+      if (live) live.gain.gain.setTargetAtTime(0, live.ctx.currentTime, 0.2);
+      return;
+    }
+    const AudioContextClass = window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    let s = sizzleRef.current;
+    if (!s) {
+      try {
+        const ctx = new AudioContextClass();
+        const len = ctx.sampleRate;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = 5200;
+        bp.Q.value = 0.7;
+        const gain = ctx.createGain();
+        gain.gain.value = 0;
+        src.connect(bp);
+        bp.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+        s = { ctx, gain };
+        sizzleRef.current = s;
+      } catch {
+        return;
+      }
+    }
+    void s.ctx.resume().catch(() => {});
+    s.gain.gain.setTargetAtTime(stage === "build" ? 0.03 * sfxLevel : 0, s.ctx.currentTime, 0.4);
+    return () => {
+      s!.gain.gain.setTargetAtTime(0, s!.ctx.currentTime, 0.25);
+    };
+  }, [sound, stage, sfxLevel]);
   // Stamp dialogue activity so the underscore knows someone is talking.
   useEffect(() => {
     if (secret) lastDialogueRef.current = Date.now();
@@ -514,7 +596,7 @@ export default function Home() {
       g = a.createGain();
     o.type = "square";
     o.frequency.value = 440;
-    g.gain.value = 0.025;
+    g.gain.value = 0.025 * sfxLevel;
     o.connect(g);
     g.connect(a.destination);
     o.start();
@@ -523,11 +605,48 @@ export default function Home() {
       void a.close();
     };
   }
+  // One-shot synth helper: enveloped oscillator, optional pitch slide.
+  function blip(freq: number, dur: number, type: OscillatorType, vol: number, slideTo?: number, delay = 0) {
+    if (!sound || sfxLevel <= 0) return;
+    try {
+      const a = new AudioContext(),
+        o = a.createOscillator(),
+        g = a.createGain();
+      const t0 = a.currentTime + delay;
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * sfxLevel), t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g);
+      g.connect(a.destination);
+      o.start(t0);
+      o.stop(t0 + dur + 0.05);
+      o.onended = () => {
+        void a.close();
+      };
+    } catch { /* audio is optional */ }
+  }
+  // Customer slurps the bowl: a wobbly downward sweep.
+  function slurp() {
+    blip(520, 0.45, "sawtooth", 0.05, 150);
+    blip(390, 0.4, "triangle", 0.04, 120, 0.08);
+  }
+  // Coins hit the register: two bright pings.
+  function chaChing() {
+    blip(988, 0.12, "triangle", 0.06);
+    blip(1319, 0.22, "triangle", 0.06, undefined, 0.1);
+  }
+  // Egg meets chicken: a low thud.
+  function thud() {
+    blip(170, 0.16, "sine", 0.09, 55);
+  }
   function splash() {
     if (!sound) return;
     try {
       const el = new Audio("/audio/splash.ogg");
-      el.volume = 0.55;
+      el.volume = 0.55 * sfxLevel;
       void el.play().catch(() => {});
     } catch { /* audio is optional */ }
   }
@@ -553,7 +672,10 @@ export default function Home() {
     if (!canPlay) return;
     beep();
     const removing = selected.includes(id);
-    if (!removing) splash();
+    if (!removing) {
+      splash();
+      setSplashFx((k) => k + 1);
+    }
     const next = removing ? selected.filter((x) => x !== id) : [...selected, id];
     U(next);
     if (id === "hot" && !removing && selected.includes("corn")) E("Sunshine with consequences.");
@@ -571,6 +693,7 @@ export default function Home() {
     if (!canPlay || stage !== "build" || eggs >= MAX_AJITAMA) return;
     beep();
     splash();
+    setSplashFx((k) => k + 1);
     const next = addAjitama(eggs);
     A(next);
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
@@ -612,6 +735,10 @@ export default function Home() {
       S("duel");
     }
   }
+  function serveFanfare() {
+    slurp();
+    window.setTimeout(() => chaChing(), 280);
+  }
   function bossWin() {
     discover("goat");
     const withNoodles = selected.includes("noodles") ? selected : [...selected, "noodles"];
@@ -620,6 +747,7 @@ export default function Home() {
     setServeResult({ kind: "goat", earned });
     U(withNoodles);
     E("");
+    serveFanfare();
     S("goat");
   }
   function chickenLose() {
@@ -649,12 +777,14 @@ export default function Home() {
       setRun(next);
       setServeResult({ kind: "duel-win", earned });
       E(`The customer is delighted. +${earned} coins. Chef Kenji nods approvingly.`);
+      serveFanfare();
       S("over");
     } else if (result.winner === "draw") {
       const { run: next, earned } = serveBowl(run, selected, {});
       setRun(next);
       setServeResult({ kind: "duel-draw", earned });
       E(`All 52 cards tied. The customer calls it a legendary meal. +${earned} coins.`);
+      serveFanfare();
       S("over");
     } else if (result.winner !== "tie") {
       const { run: next } = loseCustomer(run);
@@ -683,7 +813,7 @@ export default function Home() {
   }
   function reset() {
     clearBowl();
-    setRun(initialRun());
+    setRun(initialRun(heartsForDay));
     S("roll");
   }
   // Next customer in line: fresh bowl, same day, same coins, same hearts.
@@ -725,7 +855,7 @@ export default function Home() {
   function openNextDay() {
     if (!canPlay) return;
     beep();
-    const next = startDay({ ...run, day: run.day + 1 });
+    const next = startDay({ ...run, day: run.day + 1 }, heartsForDay);
     setRun(next);
     clearBowl();
     E(`Day ${next.day}. ${CUSTOMERS_PER_DAY} customers, one dream. The regulars are already lining up.`);
@@ -803,6 +933,14 @@ export default function Home() {
             ★ CHALLENGES {discoveries.length}/{discoveryDefinitions.length}
           </button>
           <button
+            className="settings-btn"
+            type="button"
+            onClick={() => setShowSettings(true)}
+            aria-label="Open settings"
+          >
+            ⚙ SETTINGS
+          </button>
+          <button
             className="sound"
             aria-pressed={sound}
             onClick={() => M(!sound)}
@@ -870,10 +1008,10 @@ export default function Home() {
             </span>
             <span
               className="day-hud"
-              aria-label={`Day ${run.day}, customer ${run.customer} of ${CUSTOMERS_PER_DAY}, ${run.hearts} of ${MAX_HEARTS} hearts, ${run.totalCoins} coins earned`}
+              aria-label={`Day ${run.day}, customer ${run.customer} of ${CUSTOMERS_PER_DAY}, ${run.hearts} of ${heartsForDay} hearts, ${run.totalCoins} coins earned`}
             >
               DAY {run.day} · {run.customer}/{CUSTOMERS_PER_DAY} · {"♥".repeat(run.hearts)}
-              <span className="muted">{"♥".repeat(MAX_HEARTS - run.hearts)}</span> · {run.totalCoins} COINS
+              <span className="muted">{"♥".repeat(Math.max(0, heartsForDay - run.hearts))}</span> · {run.totalCoins} COINS
             </span>
             <button
               onClick={() =>
@@ -915,16 +1053,39 @@ export default function Home() {
             )}
           </div>
           {stage === "boss" ? (
-            <ChickenBoss onWin={bossWin} onLose={chickenLose} onThrow={beep} isOnFire={fieryChicken} isGolden={goldenChicken} />
+            <ChickenBoss onWin={bossWin} onLose={chickenLose} onThrow={beep} onHit={thud} isOnFire={fieryChicken} isGolden={goldenChicken} />
           ) : (
-            <Shop
-              toppings={selected}
-              eggs={eggs}
-              bowlIndex={bowlIndex}
-              sleepy={sleepy}
-              knockedBottles={knockedBottles}
-              onBottleKnock={knockBottle}
-            />
+            <div className="shop-wrap">
+              <Shop
+                toppings={selected}
+                eggs={eggs}
+                bowlIndex={bowlIndex}
+                sleepy={sleepy}
+                knockedBottles={knockedBottles}
+                onBottleKnock={knockBottle}
+              />
+              {stage === "build" && (
+                <div className="steam-layer" aria-hidden="true">
+                  <span className="steam-wisp" style={{ left: "41%" }} />
+                  <span className="steam-wisp" style={{ left: "49%", animationDelay: "1.2s" }} />
+                  <span className="steam-wisp" style={{ left: "57%", animationDelay: "2.1s" }} />
+                </div>
+              )}
+              {splashFx > 0 && (
+                <div key={splashFx} className="splash-burst" aria-hidden="true">
+                  {[
+                    [-34, -26], [-18, -40], [0, -46], [18, -40], [34, -26],
+                    [-26, -10], [26, -10], [0, -18],
+                  ].map(([dx, dy], i) => (
+                    <span
+                      key={i}
+                      className="burst-drop"
+                      style={{ "--dx": `${dx}px`, "--dy": `${dy}px`, animationDelay: `${(i % 3) * 0.03}s` } as React.CSSProperties}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <div className="scene-bottom">
             <span>✦ {specialSign}</span>
@@ -1393,7 +1554,14 @@ export default function Home() {
           )}
         </div>
       </section>
-      {discoveryToast && <p className="discovery-toast" role="status">{discoveryToast}</p>}
+      {discoveryToast && (
+        <p className="discovery-toast" role="status" aria-hidden="false">
+          <span className="sparkle" aria-hidden="true">✦</span>
+          {" "}{discoveryToast}{" "}
+          <span className="sparkle sparkle-2" aria-hidden="true">✦</span>
+          <span className="sparkle sparkle-3" aria-hidden="true">✧</span>
+        </p>
+      )}
       <div className="challenges-cta-row">
         <button className="challenges-cta" type="button" onClick={() => setShowChallenges(true)}>
           ★ View all {discoveryDefinitions.length} challenges ({discoveries.length}/{discoveryDefinitions.length})
@@ -1442,6 +1610,67 @@ export default function Home() {
             Got it. Let&apos;s eat. ×
           </button>
         </aside>
+      )}
+      {showSettings && (
+        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Settings">
+          <div className="popup-card settings-popup">
+            <div className="popup-header">
+              <h3>Settings</h3>
+              <button type="button" aria-label="Close settings" onClick={() => setShowSettings(false)}>×</button>
+            </div>
+            <label className="setting-row">
+              <span>MUSIC VOLUME</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.music}
+                onChange={(event) => setSettings((s) => ({ ...s, music: Number(event.target.value) }))}
+                aria-label="Music volume"
+              />
+              <output aria-label={`${settings.music} percent`}>{settings.music}</output>
+            </label>
+            <label className="setting-row">
+              <span>SFX VOLUME</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.sfx}
+                onChange={(event) => setSettings((s) => ({ ...s, sfx: Number(event.target.value) }))}
+                aria-label="Sound effects volume"
+              />
+              <output aria-label={`${settings.sfx} percent`}>{settings.sfx}</output>
+            </label>
+            <fieldset className="setting-row difficulty-field">
+              <legend>DIFFICULTY</legend>
+              <div className="difficulty-btns" role="group" aria-label="Difficulty">
+                {(["easy", "normal", "hard"] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={settings.difficulty === d}
+                    className={settings.difficulty === d ? "chosen" : ""}
+                    onClick={() => setSettings((s) => ({ ...s, difficulty: d }))}
+                  >
+                    {d.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <p className="tiny">
+                EASY: 4 HEARTS/DAY · NORMAL: 3 · HARD: 2. A new difficulty takes
+                effect on your next day (or a fresh run).
+              </p>
+            </fieldset>
+            <div className="popup-actions">
+              <button className="primary" type="button" onClick={() => setShowSettings(false)}>
+                BACK TO RAMEN →
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showIntroPopup && (
         <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Hidden challenges intro">

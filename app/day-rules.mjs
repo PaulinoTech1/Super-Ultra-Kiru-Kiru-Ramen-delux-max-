@@ -9,15 +9,21 @@ export const TIP_PER_TOPPING = 10;
 export const DUEL_WIN_BONUS = 30;
 export const GOAT_BONUS = 100;
 
+// Difficulty select (settings UI): how forgiving a day is.
+export const HEARTS_BY_DIFFICULTY = { easy: 4, normal: 3, hard: 2 };
+export function heartsForDifficulty(difficulty) {
+  return HEARTS_BY_DIFFICULTY[difficulty] ?? MAX_HEARTS;
+}
+
 const BEST_KEY = "kuru-kuru-best";
 
 // A run tracks the whole shift arc. `result` is null while the day is live,
 // then "day-end" | "gameover" | "victory" once the day resolves.
-export function initialRun() {
+export function initialRun(maxHearts = MAX_HEARTS) {
   return {
     day: 1,
     customer: 1,
-    hearts: MAX_HEARTS,
+    hearts: maxHearts,
     coins: 0,       // coins earned today
     totalCoins: 0,  // coins earned across the whole run
     served: 0,      // happy customers today
@@ -30,11 +36,11 @@ export function initialRun() {
 }
 
 // Open the next day: per-day counters reset, day number and totals carry over.
-export function startDay(run) {
+export function startDay(run, maxHearts = MAX_HEARTS) {
   return {
     ...run,
     customer: 1,
-    hearts: MAX_HEARTS,
+    hearts: maxHearts,
     coins: 0,
     served: 0,
     perfect: 0,
