@@ -125,13 +125,15 @@
      inside the first screen. The dialogue stays visible while Kenji is
      asleep (it holds the wake button) or while a secret is showing. */
   main[data-action="true"] .shop-wrap canvas,
-  main[data-stage="intro"] .shop-wrap canvas {
+  main[data-stage="intro"] .shop-wrap canvas,
+  main[data-stage="roll"] .shop-wrap canvas {
     height: 148px;
     width: auto;
     max-width: 100%;
     margin: 0 auto;
   }
-  main[data-action="true"]:not([data-sleepy="true"]):not([data-secret="true"]) .dialogue {
+  main[data-action="true"]:not([data-sleepy="true"]):not([data-secret="true"]) .dialogue,
+  main[data-stage="roll"]:not([data-sleepy="true"]):not([data-secret="true"]) .dialogue {
     display: none;
   }
   /* The 508 stamp and the location button are hidden with the desktop-only
@@ -139,4 +141,55 @@
      all 21 challenges stay reachable on mobile. */
   .mobile-secrets { display: flex; gap: 14px; }
   .mobile-secrets button { font-size: 8px; letter-spacing: 1px; color: var(--orange); }
+  /* Mobile steppers: the roll and build stages show one option card per
+     screen. Tap ‹ › to browse instead of scrolling through option grids.
+     Desktop ignores data-active and shows every option. */
+  .bowl-step-nav,
+  .ing-step-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .bowl-step-nav > button,
+  .ing-step-nav > button {
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--orange);
+    border: 1px solid var(--line);
+    padding: 0 12px;
+  }
+  .bowl-step-nav > button:disabled,
+  .ing-step-nav > button:disabled {
+    opacity: 0.25;
+  }
+  .step-dots { display: flex; gap: 6px; }
+  .step-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #4d5543;
+  }
+  .step-dots span.on { background: var(--orange); }
+  .step-pos { font-size: 9px; letter-spacing: 1px; color: var(--muted); margin: 0; }
+  /* Bowl cards: single column, only the active card is shown. */
+  .bowl-collection { display: block; margin: 14px 0; }
+  .bowl-collection li:not([data-active="true"]) { display: none; }
+  .bowl-collection li[data-active="true"] {
+    display: flex;
+    min-height: 84px;
+    font-size: 11px;
+  }
+  .bowl-collection .bowl-choice { padding: 16px 12px; }
+  .bowl-collection .mini-bowl { width: 34px; height: 22px; }
+  /* Ingredient cards: only the active card is shown, sized up for the
+     single-card view so the toggle target stays thumb-friendly. */
+  .ingredients > :not([data-active="true"]) { display: none; }
+  .ingredients > [data-active="true"] { min-height: 104px; padding: 16px 12px; }
+  .ingredients > [data-active="true"] .ingredient-icon { font-size: 34px; }
+  .ingredients > [data-active="true"] > span:nth-child(2) { font-size: 13px; }
+  .ingredients > [data-active="true"] small { font-size: 9px; }
 }

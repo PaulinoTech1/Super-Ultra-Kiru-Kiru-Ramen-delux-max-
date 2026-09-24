@@ -356,6 +356,10 @@ export default function Home() {
     [refusals, R] = useState(0),
     [selected, U] = useState<string[]>([]),
     [tab, T] = useState("ALL"),
+    // Mobile stepper index for the build-stage ingredient cards. On phones
+    // ingredients are shown one card at a time (tapped ‹ ›) instead of a
+    // scrolling grid; desktop ignores `mStep`.
+    [mStep, setMStep] = useState(0),
     [deck, D] = useState<ReturnType<typeof makeDeck>>([]),
     [round, Q] = useState<ReturnType<typeof drawRound> | null>(null),
     [sound, M] = useState(false),
@@ -998,7 +1002,13 @@ export default function Home() {
     D([]);
     E("");
     T("ALL");
+    setMStep(0);
     setServeResult(null);
+  }
+  // Tab switches reset the mobile ingredient stepper to the first card.
+  function switchTab(t: string) {
+    T(t);
+    setMStep(0);
   }
   function reset() {
     clearBowl();
@@ -1050,6 +1060,13 @@ export default function Home() {
     E(`Day ${next.day}. ${CUSTOMERS_PER_DAY} customers, one dream. The regulars are already lining up.`);
     S("roll");
   }
+  // Ingredients visible under the current build tab; drives the mobile
+  // one-card-at-a-time stepper (mStep) as well as the grid.
+  const visibleItems = items.filter(
+    (_, i) =>
+      tab === "ALL" ||
+      tab === (i === 0 ? "BASE" : i < 6 ? "TOPPINGS" : "EXTRAS"),
+  );
   const message = sleepy
     ? "Chef Kenji has dozed off. Wake him to continue."
     : stage === "roll"
@@ -1462,7 +1479,7 @@ export default function Home() {
                 {["ALL", "BASE", "TOPPINGS", "EXTRAS"].map((t) => (
                   <button
                     key={t}
-                    onClick={() => T(t)}
+                    onClick={() => switchTab(t)}
                     aria-pressed={tab === t}
                     className={tab === t ? "chosen" : ""}
                   >
@@ -1471,17 +1488,12 @@ export default function Home() {
                 ))}
               </div>
               <div className="ingredients">
-                {items
-                  .filter(
-                    (_, i) =>
-                      tab === "ALL" ||
-                      tab ===
-                        (i === 0 ? "BASE" : i < 6 ? "TOPPINGS" : "EXTRAS"),
-                  )
-                  .map(([id, name, note, glyph, color]) =>
+                {visibleItems
+                  .map(([id, name, note, glyph, color], vi) =>
                     id === "ajitama" ? (
                       <div
                         key={id}
+                        data-active={vi === mStep}
                         className={
                           eggs
                             ? "ingredient selected egg-ingredient"
@@ -1523,6 +1535,7 @@ export default function Home() {
                     ) : (
                       <button
                         key={id}
+                        data-active={vi === mStep}
                         className={
                           selected.includes(id)
                             ? "ingredient selected"
@@ -1542,6 +1555,38 @@ export default function Home() {
                       </button>
                     ),
                   )}
+              </div>
+              <div
+                className="ing-step-nav"
+                role="group"
+                aria-label="Browse ingredients"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMStep((s) => Math.max(0, s - 1))}
+                  disabled={mStep === 0}
+                  aria-label="Previous ingredient"
+                >
+                  ‹
+                </button>
+                <div className="step-dots" aria-hidden="true">
+                  {visibleItems.map(([id], i) => (
+                    <span key={id} className={i === mStep ? "on" : ""} />
+                  ))}
+                </div>
+                <p className="step-pos" aria-live="polite">
+                  {mStep + 1} / {visibleItems.length}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMStep((s) => Math.min(visibleItems.length - 1, s + 1))
+                  }
+                  disabled={mStep === visibleItems.length - 1}
+                  aria-label="Next ingredient"
+                >
+                  ›
+                </button>
               </div>
               <button
                 className="primary"
