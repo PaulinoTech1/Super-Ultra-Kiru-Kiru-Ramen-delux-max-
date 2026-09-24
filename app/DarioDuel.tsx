@@ -88,6 +88,12 @@ export default function DarioDuel({
   const [now, setNow] = useState(() => Date.now());
   const roundOver = useRef(false);
   const flightTimer = useRef<number | null>(null);
+  // Latest stun/cooldown deadlines, mirrored for the clock below so it can
+  // tell whether a tick would actually flip the stunned/cooling indicators.
+  const deadlinesRef = useRef({ stunnedUntil: 0, cooldownUntil: 0 });
+  useEffect(() => {
+    deadlinesRef.current = { stunnedUntil, cooldownUntil };
+  });
 
   // Clear a mid-flight egg if the duel unmounts.
   useEffect(() => {
@@ -96,9 +102,20 @@ export default function DarioDuel({
     };
   }, []);
 
-  // Clock for cooldown / stun indicators.
+  // Clock for cooldown / stun indicators. The tick still runs at 250ms so
+  // the indicators flip promptly, but it only triggers a re-render when a
+  // tick would actually change the stunned/cooling booleans; otherwise the
+  // updater returns the previous timestamp and React bails out.
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 250);
+    const timer = setInterval(() => {
+      const t = Date.now();
+      const { stunnedUntil: su, cooldownUntil: cu } = deadlinesRef.current;
+      setNow((prev) => {
+        const was = prev < su || prev < cu;
+        const is = t < su || t < cu;
+        return was === is ? prev : t;
+      });
+    }, 250);
     return () => clearInterval(timer);
   }, []);
 

@@ -360,6 +360,9 @@ export default function Home() {
     // ingredients are shown one card at a time (tapped ‹ ›) instead of a
     // scrolling grid; desktop ignores `mStep`.
     [mStep, setMStep] = useState(0),
+    // Mobile stepper index for the welcome-stage craving options. Same
+    // one-card-at-a-time treatment as the bowl and ingredient steppers.
+    [craveIdx, setCraveIdx] = useState(0),
     [deck, D] = useState<ReturnType<typeof makeDeck>>([]),
     [round, Q] = useState<ReturnType<typeof drawRound> | null>(null),
     [sound, M] = useState(false),
@@ -1067,6 +1070,11 @@ export default function Home() {
       tab === "ALL" ||
       tab === (i === 0 ? "BASE" : i < 6 ? "TOPPINGS" : "EXTRAS"),
   );
+  // Welcome-stage craving options; drives the mobile one-card stepper.
+  // The menu shrinks to a single option after five refusals, so the
+  // stepper index is clamped to the live list length.
+  const craveNames = refusals >= 5 ? ["Ramen"] : ["Ramen", "Pizza", "A burger"];
+  const craveIdxClamped = Math.min(craveIdx, craveNames.length - 1);
   const message = sleepy
     ? "Chef Kenji has dozed off. Wake him to continue."
     : stage === "roll"
@@ -1211,6 +1219,20 @@ export default function Home() {
           </div>
         ))}
       </nav>
+      {/* Compact stage indicator for phones: the full .steps nav is hidden
+          under 640px, so mobile players get this one-line breadcrumb. */}
+      <p className="step-crumb" aria-label="Game progress">
+        {(() => {
+          const labels = [
+            stage === "roll" ? "ROLL YOUR BOWL" : "PICK YOUR CRAVING",
+            "BUILD YOUR BOWL",
+            thirdStep(stage),
+          ];
+          const idx =
+            stage === "roll" || stage === "welcome" ? 0 : stage === "build" ? 1 : 2;
+          return `STEP ${idx + 1} OF 3 · ${labels[idx]}`;
+        })()}
+      </p>
       <section className="game-layout">
         <div className="scene-side">
           <div className="scene-top">
@@ -1418,12 +1440,10 @@ export default function Home() {
                 Pull up a stool. Chef wants to know.
               </p>
               <div className="cravings">
-                {(refusals >= 5
-                  ? ["Ramen"]
-                  : ["Ramen", "Pizza", "A burger"]
-                ).map((name, i) => (
+                {craveNames.map((name, i) => (
                   <button
                     key={name}
+                    data-active={i === craveIdxClamped}
                     onClick={() => choose(i === 0)}
                     className={i === 0 ? "ramen-choice" : ""}
                   >
@@ -1443,6 +1463,43 @@ export default function Home() {
                     <b>↗</b>
                   </button>
                 ))}
+              </div>
+              <div
+                className="crave-step-nav"
+                role="group"
+                aria-label="Browse cravings"
+              >
+                <button
+                  type="button"
+                  onClick={() => setCraveIdx((c) => Math.max(0, c - 1))}
+                  disabled={craveIdxClamped === 0}
+                  aria-label="Previous craving"
+                >
+                  ‹
+                </button>
+                <div className="step-dots" aria-hidden="true">
+                  {craveNames.map((name, i) => (
+                    <span
+                      key={name}
+                      className={i === craveIdxClamped ? "on" : ""}
+                    />
+                  ))}
+                </div>
+                <p className="step-pos" aria-live="polite">
+                  {craveIdxClamped + 1} / {craveNames.length}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCraveIdx((c) =>
+                      Math.min(craveNames.length - 1, c + 1),
+                    )
+                  }
+                  disabled={craveIdxClamped >= craveNames.length - 1}
+                  aria-label="Next craving"
+                >
+                  ›
+                </button>
               </div>
               <div className="insistence">
                 <span>CHEF&apos;S PATIENCE</span>

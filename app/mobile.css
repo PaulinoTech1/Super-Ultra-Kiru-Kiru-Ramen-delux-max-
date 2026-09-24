@@ -3,17 +3,13 @@
   main { padding: 0 10px; }
   header { min-height: 48px; height: 48px; padding: 8px 0; flex-wrap: nowrap; }
   .intro, .steps { display: none; }
-  .brand { font-size: 18px; gap: 8px; }
   .brand-mark { font-size: 25px; line-height: 24px; }
-  .location { order: 0; width: auto; font-size: 7px; margin-left: auto; }
-  .location > span { padding: 0 4px; }
+  .location { order: 0; width: auto; font-size: 10px; margin-left: auto; }
   .brand { font-size: 15px; }
   .brand-mark { font-size: 21px; }
-  .sound { padding: 6px 7px; font-size: 8px; }
+  .sound { padding: 9px 10px; font-size: 10px; }
   .location > span { padding: 0 8px; }
   .sound { padding: 9px 10px; font-size: 9px; }
-  .intro { align-items: flex-start; padding: 28px 0 24px; }
-  .intro > div:first-child { min-width: 0; }
   .stamp { display: none; }
   h1 { font-size: clamp(38px, 13vw, 56px); letter-spacing: -2px; }
   h1 sup { font-size: 20px; padding-left: 5px; }
@@ -25,7 +21,7 @@
   .steps b { display: none; }
   .game-layout { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
   .game-layout > .scene-side { order: 1; }
-  .game-layout > .panel { order: 2; position: static; }
+  .game-layout > .panel { order: 2; }
   .game-layout > .scene-side, .game-layout > .panel { width: 100%; min-width: 0; }
   .scene-side, .control-side, .panel { min-width: 0; max-width: 100%; }
   .scene-side > *, .panel > * { min-width: 0; max-width: 100%; }
@@ -34,21 +30,20 @@
   .scene-side canvas, .boss-game canvas { display: block; width: 100%; height: auto; }
   .scene-side canvas[tabindex="0"] { cursor: crosshair; outline: 1px solid transparent; }
   .scene-side canvas[tabindex="0"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .panel .cravings { max-height: 224px; overflow-y: scroll; overscroll-behavior: contain; padding: 28px 5px 5px 0; scrollbar-gutter: stable; position: relative; }
-  .panel .cravings::before { content: "OPTIONS — SCROLL TO BROWSE"; display: block; position: absolute; inset: 0 5px auto 0; z-index: 1; padding: 6px 0 8px; background: var(--panel-bg); color: var(--muted); font-family: var(--font-mono); font-size: 9px; letter-spacing: .7px; text-align: center; pointer-events: none; }
+  .panel .cravings { position: relative; }
   .panel .cravings button { width: 100%; }
-  .scene-top, .scene-bottom { font-size: 7px; letter-spacing: .4px; }
-  .scene-top button, .scene-bottom button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dialogue { gap: 7px; padding: 9px; }
-  .dialogue p { font-size: 8px; line-height: 1.45; }
+  /* Cravings use the same one-card stepper as bowls and ingredients on
+     phones: only the active option is shown, no scroll box. */
+  .cravings > :not([data-active="true"]) { display: none; }
+  .cravings > [data-active="true"] { min-height: 84px; }
+  .scene-top, .scene-bottom { font-size: 10px; letter-spacing: .4px; }
+  .scene-top button, .scene-bottom button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+  .dialogue { gap: 7px; padding: 8px; margin-top: 6px; box-shadow: 2px 2px 0 #171c17; }
+  .dialogue p { font-size: 11px; line-height: 1.6; min-width: 0; margin: 0; overflow-wrap: anywhere; }
   .chef-avatar { flex: 0 0 auto; }
-  .panel { padding: 10px; }
-  .panel-title h2, h2 { font-size: 18px; }
-  .description { font-size: 8px; }
-  .cravings button { min-height: 48px; padding: 8px 6px; }
-  .cravings button small { font-size: 7px; }
+  .panel { padding: 10px; min-height: 0; }
   .food-icon { font-size: 18px; }
-  .insistence { font-size: 7px; letter-spacing: .5px; }
+  .insistence { font-size: 10px; letter-spacing: .5px; }
   .primary { min-height: 44px; padding: 11px 8px; font-size: 8px; }
   /* The panel must never be sticky: on phones it is taller than the
      viewport, and a stuck panel traps its own bottom content (the primary
@@ -56,32 +51,24 @@
   .game-layout > .panel { position: static; }
   .scene-side .footnote { display: none; }
   .scene-top, .scene-bottom { gap: 8px; line-height: 1.5; flex-wrap: wrap; }
-  .scene-top button, .scene-bottom button { font-size: 8px; }
   .dialogue { gap: 7px; padding: 8px; margin-top: 6px; box-shadow: 2px 2px 0 #171c17; }
-  .dialogue p { font-size: 8px; line-height: 1.35; }
-  .dialogue .eyebrow { font-size: 7px; }
-  .scene-top, .scene-bottom { min-height: 22px; font-size: 6px; }
-  .dialogue p { min-width: 0; margin: 0; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
-  .dialogue > div:last-child { min-width: 0; }
+  .dialogue .eyebrow { font-size: 10px; }
+  .scene-top, .scene-bottom { min-height: 22px; }
   .dialogue .muted { display: none; }
-  .panel { min-height: 0; padding: 10px; }
-  .panel h2 { font-size: 18px; }
   .panel .description { margin: 4px 0 8px; font-size: 11px; line-height: 1.5; }
-  .panel .cravings { max-height: 132px; padding-top: 24px; }
-  .cravings button { min-height: 42px; padding: 7px 8px; }
-  .cravings button small { font-size: 8px; line-height: 1.35; }
+  .cravings button small { font-size: 9px; line-height: 1.35; }
   .food-icon { font-size: 15px; }
   .panel-title { gap: 10px; }
   .panel-title h2, h2 { font-size: 24px; line-height: 1.1; }
   .description { font-size: 10px; line-height: 1.65; }
   .tabs { gap: 3px; }
-  .tabs button { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 7px; letter-spacing: .5px; }
+  .tabs button { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 10px; letter-spacing: .5px; }
   .ingredients { grid-template-columns: 1fr; gap: 6px; }
   .ingredient { min-width: 0; padding: 11px 10px; }
   .cravings button { min-height: 58px; padding: 12px 10px; font-size: 10px; line-height: 1.35; }
   .primary { min-height: 50px; padding: 15px 13px; }
   .bowl-collection { gap: 6px; margin: 16px 0; }
-  .bowl-collection li { min-width: 0; padding: 0; font-size: 7px; }
+  .bowl-collection li { min-width: 0; padding: 0; font-size: 10px; }
   .bowl-choice { min-height: 44px; padding: 9px 6px; }
   .bowl-actions { flex-direction: column; }
   .secondary { min-height: 48px; }
@@ -89,7 +76,7 @@
   .boss-score { align-items: flex-start; gap: 9px; padding: 10px; }
   .boss-score > span { font-size: 20px; letter-spacing: 2px; }
   .boss-score p { min-width: 0; font-size: 9px; line-height: 1.45; }
-  .boss-controls { padding: 7px 8px 10px; font-size: 8px; letter-spacing: .6px; line-height: 1.5; }
+  .boss-controls { padding: 7px 8px 10px; font-size: 10px; letter-spacing: .6px; line-height: 1.5; }
   .boss-warning { padding: 14px 10px; font-size: 15px; }
   .boss-warning span { font-size: 24px; letter-spacing: 7px; }
   .goat-badge { font-size: 27px; padding: 18px 8px; }
@@ -98,8 +85,8 @@
   .discovery-entry small { font-size: 10px; line-height: 1.5; }
   .discoveries button { font-size: 9px; }
   footer { align-items: flex-start; gap: 12px; margin-top: 22px; padding: 17px 0 24px; line-height: 1.5; }
-  footer button { min-height: 36px; }
-  .footer-note { width: 100%; }
+  footer button { min-height: 44px; font-size: 10px; }
+  .footer-note { width: 100%; font-size: 9px; }
   .help { padding: 15px; margin-bottom: 18px; }
   .help p { font-size: 10px; line-height: 1.7; }
   /* Dario cookoff duel: thumb-sized targets */
@@ -140,12 +127,13 @@
      hero/header on phones; surface both secrets in the footer instead so
      all 21 challenges stay reachable on mobile. */
   .mobile-secrets { display: flex; gap: 14px; }
-  .mobile-secrets button { font-size: 8px; letter-spacing: 1px; color: var(--orange); }
+  .mobile-secrets button { font-size: 10px; letter-spacing: 1px; color: var(--orange); }
   /* Mobile steppers: the roll and build stages show one option card per
      screen. Tap ‹ › to browse instead of scrolling through option grids.
      Desktop ignores data-active and shows every option. */
   .bowl-step-nav,
-  .ing-step-nav {
+  .ing-step-nav,
+  .crave-step-nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -153,7 +141,8 @@
     margin: 14px 0;
   }
   .bowl-step-nav > button,
-  .ing-step-nav > button {
+  .ing-step-nav > button,
+  .crave-step-nav > button {
     min-width: 48px;
     min-height: 48px;
     font-size: 22px;
@@ -163,7 +152,8 @@
     padding: 0 12px;
   }
   .bowl-step-nav > button:disabled,
-  .ing-step-nav > button:disabled {
+  .ing-step-nav > button:disabled,
+  .crave-step-nav > button:disabled {
     opacity: 0.25;
   }
   .step-dots { display: flex; gap: 6px; }
@@ -174,7 +164,7 @@
     background: #4d5543;
   }
   .step-dots span.on { background: var(--orange); }
-  .step-pos { font-size: 9px; letter-spacing: 1px; color: var(--muted); margin: 0; }
+  .step-pos { font-size: 10px; letter-spacing: 1px; color: var(--muted); margin: 0; }
   /* Bowl cards: single column, only the active card is shown. */
   .bowl-collection { display: block; margin: 14px 0; }
   .bowl-collection li:not([data-active="true"]) { display: none; }
@@ -192,4 +182,15 @@
   .ingredients > [data-active="true"] .ingredient-icon { font-size: 34px; }
   .ingredients > [data-active="true"] > span:nth-child(2) { font-size: 13px; }
   .ingredients > [data-active="true"] small { font-size: 9px; }
+  /* Compact stage breadcrumb: the full .steps nav is desktop-only, so this
+     one-liner keeps phone players oriented in the flow. */
+  .step-crumb {
+    display: block;
+    margin: 0 0 10px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1.3px;
+    color: var(--orange);
+  }
+  button:focus-visible, a:focus-visible { outline-offset: 2px; }
 }
