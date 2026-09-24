@@ -317,6 +317,10 @@ export default function Home() {
   const discoveriesReady = useRef(true);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bossAudioRef = useRef<HTMLAudioElement | null>(null);
+  const brothAudioRef = useRef<HTMLAudioElement | null>(null);
+  const dialogAudioRef = useRef<HTMLAudioElement | null>(null);
+  const lastDialogueRef = useRef(0);
   useEffect(() => {
     if (discoveriesReady.current) saveDiscoveries(discoveries);
   }, [discoveries]);
@@ -378,7 +382,8 @@ export default function Home() {
     };
   }, [stage, sleepy]);
   useEffect(() => {
-    if (!sound) {
+    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh";
+    if (!sound || bossStage) {
       if (musicTimerRef.current) clearTimeout(musicTimerRef.current);
       musicTimerRef.current = null;
       void musicRef.current?.close();
@@ -414,7 +419,56 @@ export default function Home() {
       void audio.close();
       if (musicRef.current === audio) musicRef.current = null;
     };
-  }, [sound]);
+  }, [sound, stage]);
+  // File-based audio loops: boss battle, broth ambience, dialogue underscore.
+  // All CC0, see public/audio/ATTRIBUTION.md.
+  useEffect(() => {
+    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh";
+    const ensure = (ref: { current: HTMLAudioElement | null }, path: string, volume: number) => {
+      if (!ref.current) {
+        const el = new Audio(path);
+        el.loop = true;
+        el.volume = volume;
+        ref.current = el;
+      }
+      return ref.current;
+    };
+    const boss = ensure(bossAudioRef, "/audio/boss-battle.ogg", 0.4);
+    const broth = ensure(brothAudioRef, "/audio/broth-loop.ogg", 0.1);
+    const dialog = ensure(dialogAudioRef, "/audio/dialogue-loop.ogg", 0);
+    const wantBoss = sound && bossStage;
+    const wantBroth = sound && !bossStage && stage === "build";
+    if (wantBoss) {
+      broth.pause();
+      void boss.play().catch(() => {});
+    } else if (wantBroth) {
+      boss.pause();
+      void broth.play().catch(() => {});
+    } else {
+      boss.pause();
+      broth.pause();
+    }
+    // Dialogue music fades in while someone is talking, out after 8s quiet.
+    const fade = window.setInterval(() => {
+      const talking = sound && !bossStage && Date.now() - lastDialogueRef.current < 8000;
+      const target = talking ? 0.16 : 0;
+      const step = target > dialog.volume ? 0.04 : -0.04;
+      const next = Math.max(0, Math.min(0.16, dialog.volume + step));
+      dialog.volume = next;
+      if (next > 0 && dialog.paused) void dialog.play().catch(() => {});
+      else if (next === 0 && !dialog.paused) dialog.pause();
+    }, 500);
+    return () => {
+      window.clearInterval(fade);
+      boss.pause();
+      broth.pause();
+      dialog.pause();
+    };
+  }, [sound, stage]);
+  // Stamp dialogue activity so the underscore knows someone is talking.
+  useEffect(() => {
+    if (secret) lastDialogueRef.current = Date.now();
+  }, [secret]);
   function roll() {
     if (!canPlay) return;
     beep();
@@ -452,6 +506,14 @@ export default function Home() {
       void a.close();
     };
   }
+  function splash() {
+    if (!sound) return;
+    try {
+      const el = new Audio("/audio/splash.ogg");
+      el.volume = 0.55;
+      void el.play().catch(() => {});
+    } catch { /* audio is optional */ }
+  }
   function wakeChef() {
     if (sleepy) {
       discover("wake");
@@ -474,6 +536,7 @@ export default function Home() {
     if (!canPlay) return;
     beep();
     const removing = selected.includes(id);
+    if (!removing) splash();
     const next = removing ? selected.filter((x) => x !== id) : [...selected, id];
     U(next);
     if (id === "hot" && !removing && selected.includes("corn")) E("Sunshine with consequences.");
@@ -490,6 +553,7 @@ export default function Home() {
   function addEgg() {
     if (!canPlay || stage !== "build" || eggs >= MAX_AJITAMA) return;
     beep();
+    splash();
     const next = addAjitama(eggs);
     A(next);
     U((v) => (v.includes("ajitama") ? v : [...v, "ajitama"]));
