@@ -8,8 +8,10 @@ export const BOWLS = [
 ];
 export function rollBowl(random = Math.random) { return Math.floor(random() * BOWLS.length); }
 export function thirdStep(stage) {
+  if (stage === 'intro') return 'OPENING';
   if (stage === 'cookoff') return 'COOKOFF';
   if (stage === 'slosh') return 'SLOSH';
+  if (stage === 'final') return 'FINAL BOSS';
   if (stage === 'duel' || stage === 'over') return 'DUEL THE CHEF';
   if (stage === 'boss' || stage === 'boss-intro') return 'SECRET MINIBOSS';
   if (stage === 'goat') return 'ABSOLUTE GOAT';

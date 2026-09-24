@@ -16,12 +16,17 @@ import {
 } from "./chicken-rules.mjs";
 import {
   CUSTOMERS_PER_DAY,
+  FINAL_DAY,
   MAX_HEARTS,
+  NUKE_COST,
   heartsForDifficulty,
+  CUSTOMER_TYPES,
+  patienceFor,
   initialRun,
   startDay,
   serveBowl,
   loseCustomer,
+  spendCoins,
   starsForDay,
   loadBest,
   saveBest,
@@ -58,6 +63,8 @@ const challengeGuide: Record<string, string> = {
   "market-king": "Beat Chef Dario in the cookoff: match his ticket order before he finishes his. Throw fire eggs to stun him.",
   slosh: "Become Market King, then click the SLOSH & SONS delivery flyer pinned above the counter.",
   "beverage-boss": "Beat Lenny in the drink rush: serve 8 drink tickets while he fumbles deliveries, spills drinks, and rolls mystery kegs at you. Pray nobody orders the cider.",
+  nuke: "During any boss fight, press the nuke button (300 coins) to end the boss and restart at day 1.",
+  "boss-slayer": "On day 5, serve the first four customers, then beat Chef Dario in the final cookoff rematch.",
 };
 function Shop({
   toppings,
@@ -300,6 +307,10 @@ function Shop({
     />
   );
 }
+type RunState = Omit<ReturnType<typeof initialRun>, "result"> & {
+  result: null | "day-end" | "gameover" | "victory";
+};
+
 export default function Home() {
   const [stage, S] = useState("roll"),
     [refusals, R] = useState(0),
@@ -336,7 +347,7 @@ export default function Home() {
       }
     }),
     [splashFx, setSplashFx] = useState(0),
-    [run, setRun] = useState(() => initialRun(heartsForDifficulty(settings.difficulty))),
+    [run, setRun] = useState<RunState>(() => initialRun(heartsForDifficulty(settings.difficulty))),
     [serveResult, setServeResult] = useState<{ kind: string; earned?: number } | null>(null),
     [best, setBest] = useState(() => {
       if (typeof window === "undefined") return { day: 0, coins: 0, bowls: 0 };
@@ -350,6 +361,9 @@ export default function Home() {
     [specialSign] = useState<string>(specialSigns[0]),
     [showChallenges, setShowChallenges] = useState(false),
     [showSettings, setShowSettings] = useState(false),
+    [nukeFlash, setNukeFlash] = useState(false),
+    [patienceLeft, setPatienceLeft] = useState<number | null>(null),
+    [finalAttempt, setFinalAttempt] = useState(0),
     [hintPopupId, setHintPopupId] = useState<string | null>(null),
     [showIntroPopup, setShowIntroPopup] = useState(false);
   const discoveriesReady = useRef(true);
@@ -370,6 +384,22 @@ export default function Home() {
   const sfxLevel = Math.max(0, Math.min(100, settings.sfx)) / 100;
   const musicLevel = Math.max(0, Math.min(100, settings.music)) / 100;
   const heartsForDay = heartsForDifficulty(settings.difficulty);
+  const customerType = run.customers?.[run.customer - 1] ?? "regular";
+  const typeInfo = CUSTOMER_TYPES[customerType as keyof typeof CUSTOMER_TYPES] ?? CUSTOMER_TYPES.regular;
+  const isFinalBoss = run.day >= FINAL_DAY && run.customer >= CUSTOMERS_PER_DAY && customerType === "boss";
+  // Rusher bonus for fast service, critic penalty for a lazy bowl.
+  function payoutOpts() {
+    const bonus =
+      customerType === "rusher" &&
+      patienceLeft !== null &&
+      patienceLeft > patienceFor("rusher") / 2
+        ? CUSTOMER_TYPES.rusher.bonus ?? 0
+        : 0;
+    const halve =
+      customerType === "critic" &&
+      selected.length < (CUSTOMER_TYPES.critic.minToppings ?? 4);
+    return { bonus, halve };
+  }
   const dialogTargetRef = useRef(0.16);
   dialogTargetRef.current = 0.16 * musicLevel;
   const musicLevelRef = useRef(0.8);
@@ -432,7 +462,7 @@ export default function Home() {
     };
   }, [stage, sleepy]);
   useEffect(() => {
-    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh";
+    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh" || stage === "final";
     if (!sound || bossStage) {
       if (musicTimerRef.current) clearTimeout(musicTimerRef.current);
       musicTimerRef.current = null;
@@ -473,7 +503,7 @@ export default function Home() {
   // File-based audio loops: boss battle, broth ambience, dialogue underscore.
   // All CC0, see public/audio/ATTRIBUTION.md.
   useEffect(() => {
-    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh";
+    const bossStage = stage === "boss" || stage === "cookoff" || stage === "slosh" || stage === "final";
     const ensure = (ref: { current: HTMLAudioElement | null }, path: string, volume: number) => {
       if (!ref.current) {
         const el = new Audio(path);
@@ -568,6 +598,42 @@ export default function Home() {
   useEffect(() => {
     if (secret) lastDialogueRef.current = Date.now();
   }, [secret]);
+  // First visit: open on the story intro instead of the counter.
+  useEffect(() => {
+    try {
+      if (!window.localStorage.getItem("kuru-kuru-intro-seen")) S("intro");
+    } catch { /* the intro is optional */ }
+  }, []);
+  function startPlaying() {
+    beep();
+    try { window.localStorage.setItem("kuru-kuru-intro-seen", "1"); } catch { /* ignore */ }
+    S("roll");
+  }
+  // Patience: (re)start the clock for each new customer. Keyed on the
+  // customer, not the stage, so side encounters do not refill the meter.
+  const customerKey = `${run.day}:${run.customer}`;
+  useEffect(() => {
+    setPatienceLeft(patienceFor(customerType));
+  }, [customerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Tick the clock while the customer waits; bosses and naps pause it.
+  useEffect(() => {
+    if ((stage !== "build" && stage !== "duel") || !canPlay) return;
+    if (customerType === "boss" || patienceLeft === null || patienceLeft <= 0) return;
+    const drain = "drain" in typeInfo && typeof typeInfo.drain === "number" ? typeInfo.drain : 1;
+    const id = window.setInterval(() => {
+      setPatienceLeft((p) => {
+        if (p === null || p <= 0) return 0;
+        return Math.max(0, p - 0.5 * drain);
+      });
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [stage, customerType, patienceLeft === null, canPlay]); // eslint-disable-line react-hooks/exhaustive-deps
+  // An empty meter is a walkout.
+  useEffect(() => {
+    if (patienceLeft === 0 && (stage === "build" || stage === "duel") && customerType !== "boss") {
+      walkout();
+    }
+  }, [patienceLeft]); // eslint-disable-line react-hooks/exhaustive-deps
   function roll() {
     if (!canPlay) return;
     beep();
@@ -742,7 +808,7 @@ export default function Home() {
   function bossWin() {
     discover("goat");
     const withNoodles = selected.includes("noodles") ? selected : [...selected, "noodles"];
-    const { run: next, earned } = serveBowl(run, withNoodles, { goatWon: true });
+    const { run: next, earned } = serveBowl(run, withNoodles, { goatWon: true, ...payoutOpts() });
     setRun(next);
     setServeResult({ kind: "goat", earned });
     U(withNoodles);
@@ -759,6 +825,79 @@ export default function Home() {
       : "Looks like you need more ramen! You're cooked, buddy. The customer leaves.");
     S("over");
   }
+  // Patience ran out: the customer walks, costing a heart.
+  function walkout() {
+    const { run: next } = loseCustomer(run);
+    setRun(next);
+    setServeResult({ kind: "walkout" });
+    E(next.result === "gameover"
+      ? `The ${typeInfo.name.toLowerCase()} waited too long. That was the last straw.`
+      : `The ${typeInfo.name.toLowerCase()} got tired of waiting and left.`);
+    S("over");
+  }
+  // The nuke: one-shot any boss, then the world (and the run) restarts.
+  function nukeWorld(boss: string, winDiscovery?: string) {
+    const { run: paid, ok } = spendCoins(run, NUKE_COST);
+    if (!ok) return;
+    thud();
+    window.setTimeout(() => serveFanfare(), 350);
+    if (winDiscovery) discover(winDiscovery);
+    discover("nuke");
+    persistBest(paid);
+    setNukeFlash(true);
+    window.setTimeout(() => setNukeFlash(false), 1400);
+    E(`Kenji has seen enough. The sky over Worcester goes white. ${boss} has been nuked from orbit. Day 1. Again.`);
+    clearBowl();
+    setPatienceLeft(null);
+    setRun(initialRun(heartsForDay));
+    S("roll");
+  }
+  function NukeButton({ boss, winDiscovery }: { boss: string; winDiscovery?: string }) {
+    const afford = run.totalCoins >= NUKE_COST;
+    return (
+      <button
+        type="button"
+        className="nuke-btn"
+        disabled={!afford}
+        onClick={() => nukeWorld(boss, winDiscovery)}
+        aria-label={
+          afford
+            ? `Nuke ${boss} for ${NUKE_COST} coins and restart the run`
+            : `Need ${NUKE_COST - run.totalCoins} more coins to nuke ${boss}`
+        }
+      >
+        ☢ I AM DONE WITH DANG BOSS, NUKE THE WORLD
+        <small>
+          {NUKE_COST} COINS{afford ? "" : ` · NEED ${NUKE_COST - run.totalCoins} MORE`}
+        </small>
+      </button>
+    );
+  }
+  // Day 5, last customer: Dario walks in for the rematch.
+  function finalWin() {
+    discover("boss-slayer");
+    const next: RunState = { ...run, result: "victory" as const, served: run.served + 1, totalServed: run.totalServed + 1 };
+    setRun(next);
+    persistBest(next);
+    E("Dario sets down his ladle. \"...The rumor was wrong.\" The market erupts. Kenji is the king of the 508.");
+    serveFanfare();
+    S("victory");
+  }
+  function finalLose() {
+    const hearts = run.hearts - 1;
+    const next = { ...run, hearts: Math.max(0, hearts), lostHearts: run.lostHearts + 1 };
+    if (hearts <= 0) {
+      const over: RunState = { ...next, result: "gameover" as const };
+      setRun(over);
+      persistBest(over);
+      E("Dario takes the crown. The shop can't take another hit.");
+      S("gameover");
+    } else {
+      setRun(next);
+      E("Dario twirls his towel. \"Is that all, Worcester?\" Run it back.");
+      setFinalAttempt((a) => a + 1);
+    }
+  }
   function duel() {
     if (!canPlay) return;
     beep();
@@ -773,14 +912,14 @@ export default function Home() {
     D(result.remaining);
     Q(result);
     if (result.winner === "player") {
-      const { run: next, earned } = serveBowl(run, selected, { duelWon: true });
+      const { run: next, earned } = serveBowl(run, selected, { duelWon: true, ...payoutOpts() });
       setRun(next);
       setServeResult({ kind: "duel-win", earned });
       E(`The customer is delighted. +${earned} coins. Chef Kenji nods approvingly.`);
       serveFanfare();
       S("over");
     } else if (result.winner === "draw") {
-      const { run: next, earned } = serveBowl(run, selected, {});
+      const { run: next, earned } = serveBowl(run, selected, { ...payoutOpts() });
       setRun(next);
       setServeResult({ kind: "duel-draw", earned });
       E(`All 52 cards tied. The customer calls it a legendary meal. +${earned} coins.`);
@@ -823,7 +962,7 @@ export default function Home() {
     clearBowl();
     S("roll");
   }
-  function persistBest(nextRun: ReturnType<typeof initialRun>) {
+  function persistBest(nextRun: RunState) {
     setBest((current) => {
       const updated = recordRun(current, nextRun);
       saveBest(updated);
@@ -1008,11 +1147,29 @@ export default function Home() {
             </span>
             <span
               className="day-hud"
-              aria-label={`Day ${run.day}, customer ${run.customer} of ${CUSTOMERS_PER_DAY}, ${run.hearts} of ${heartsForDay} hearts, ${run.totalCoins} coins earned`}
+              aria-label={`Day ${run.day}, customer ${run.customer} of ${CUSTOMERS_PER_DAY}, ${typeInfo.name}, ${run.hearts} of ${heartsForDay} hearts, ${run.totalCoins} coins earned`}
             >
-              DAY {run.day} · {run.customer}/{CUSTOMERS_PER_DAY} · {"♥".repeat(run.hearts)}
+              DAY {run.day} · {run.customer}/{CUSTOMERS_PER_DAY} · {typeInfo.name.toUpperCase()} · {"♥".repeat(run.hearts)}
               <span className="muted">{"♥".repeat(Math.max(0, heartsForDay - run.hearts))}</span> · {run.totalCoins} COINS
             </span>
+            {(stage === "build" || stage === "duel") && customerType !== "boss" && patienceLeft !== null && (
+              <div
+                className="patience-meter"
+                role="img"
+                aria-label={`${typeInfo.name} patience: ${Math.ceil(patienceLeft)} of ${patienceFor(customerType)} seconds left. ${typeInfo.blurb}`}
+              >
+                <span className="patience-label">
+                  {typeInfo.name.toUpperCase()} · {typeInfo.blurb}
+                </span>
+                <span className="patience-bar">
+                  <i
+                    style={{
+                      width: `${Math.max(0, Math.min(100, (patienceLeft / patienceFor(customerType)) * 100))}%`,
+                    }}
+                  />
+                </span>
+              </div>
+            )}
             <button
               onClick={() =>
                 revealSecret(
@@ -1122,7 +1279,30 @@ export default function Home() {
           </p>
         </div>
         <div className="panel">
-          {stage === "roll" ? (
+          {stage === "intro" ? (
+            <>
+              <p className="eyebrow orange">WORCESTER PUBLIC MARKET · 6 AM</p>
+              <h2>
+                Five days.
+                <br />
+                Five bowls a day.
+                <br />
+                One dream.
+              </h2>
+              <p className="description">
+                Kenji unlocks the shutters on his tiny ramen counter. The broth is on, the noodles are fresh, and the 508 is waking up hungry. Survive the week and the market is yours.
+              </p>
+              <p className="description">
+                Pinned to the door: a flyer. <b>CHEF DARIO&apos;S COOKOFF CHALLENGE.</b> The Providence hotshot says Worcester ramen is a rumor. He is at the market all week, waiting for someone worth beating.
+              </p>
+              <p className="description">
+                A delivery truck backfires outside. Lenny of <b>SLOSH &amp; SONS</b> stumbles in with a crate of mystery kegs and a flyer of his own. &ldquo;Drinks! I do drinks now! Pray nobody orders the cider.&rdquo;
+              </p>
+              <button className="primary" onClick={startPlaying}>
+                OPEN THE SHOP <span>→</span>
+              </button>
+            </>
+          ) : stage === "roll" ? (
             <BowlRoll
   value={bowlIndex}
   onRoll={roll}
@@ -1130,6 +1310,31 @@ export default function Home() {
   onContinue={confirmBowl}
             />
           ) : stage === "welcome" ? (
+            isFinalBoss ? (
+              <>
+                <p className="eyebrow orange">DAY 5 · FINAL CUSTOMER</p>
+                <h2>
+                  Dario is here.
+                  <br />
+                  In person.
+                </h2>
+                <p className="description">
+                  The Providence hotshot slides onto the last stool. &ldquo;No tickets. No excuses. You and me. Three rounds, my speed. The market decides who is king.&rdquo;
+                </p>
+                <p className="description">
+                  Win and the week is yours. Lose and he takes your last heart.
+                </p>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    beep();
+                    S("final");
+                  }}
+                >
+                  FACE DARIO <span>→</span>
+                </button>
+              </>
+            ) : (
             <>
               <p className="eyebrow orange">FIRST THINGS FIRST</p>
               <h2>
@@ -1180,6 +1385,7 @@ export default function Home() {
                   : "No reservations. No rush. (Unless you order pizza.)"}
               </p>
             </>
+            )
           ) : stage === "build" ? (
             <>
               <div className="panel-title">
@@ -1342,6 +1548,7 @@ export default function Home() {
                 Keyboard: focus the arena, aim with ← →, throw with Space or
                 Enter. No timer. Unlimited eggs.
               </p>
+              <NukeButton boss="the wild chicken" winDiscovery="goat" />
               <div className="result">
                 REWARD: ABSOLUTE GOAT STATUS + ORDER COMPLETE
               </div>
@@ -1382,14 +1589,34 @@ export default function Home() {
               </p>
             </>
           ) : stage === "cookoff" ? (
-            <DarioDuel
-              items={items}
-              onUnlock={discover}
-              onThrow={beep}
-              onExit={() => S("build")}
-            />
+            <>
+              <NukeButton boss="Chef Dario" winDiscovery="market-king" />
+              <DarioDuel
+                items={items}
+                onUnlock={discover}
+                onThrow={beep}
+                onExit={() => S("build")}
+              />
+            </>
           ) : stage === "slosh" ? (
-            <SloshRush onUnlock={discover} onExit={() => S("build")} />
+            <>
+              <NukeButton boss="Lenny" winDiscovery="beverage-boss" />
+              <SloshRush onUnlock={discover} onExit={() => S("build")} />
+            </>
+          ) : stage === "final" ? (
+            <>
+              <p className="eyebrow orange">FINAL BOSS · THE REMATCH</p>
+              <NukeButton boss="Chef Dario" winDiscovery="boss-slayer" />
+              <DarioDuel
+                key={finalAttempt}
+                items={items}
+                turbo
+                onUnlock={discover}
+                onThrow={beep}
+                onExit={() => S("welcome")}
+                onDuelEnd={(winner) => (winner === "player" ? finalWin() : finalLose())}
+              />
+            </>
           ) : stage === "day-end" ? (
             <>
               <p className="eyebrow orange">DAY {run.day} COMPLETE</p>
@@ -1467,7 +1694,9 @@ export default function Home() {
                     ? "A legendary draw."
                     : serveResult?.kind === "chicken-loss"
                       ? "Outfoxed by poultry."
-                      : "The customer walks out."}
+                      : serveResult?.kind === "walkout"
+                        ? "Outwaited."
+                        : "The customer walks out."}
               </h2>
               <p className="description">
                 {serveResult?.kind === "duel-win"
@@ -1476,7 +1705,9 @@ export default function Home() {
                     ? "All 52 cards tied. Even Chef is impressed, and the customer pays full price."
                     : serveResult?.kind === "chicken-loss"
                       ? "The wild chicken defends its turf. No bowl, no pay, one unhappy customer."
-                      : "Chef Kenji takes the duel. The customer leaves hungry and tells Yelp."}
+                      : serveResult?.kind === "walkout"
+                        ? "Too slow. The customer got tired of waiting, and the Yelp review writes itself."
+                        : "Chef Kenji takes the duel. The customer leaves hungry and tells Yelp."}
               </p>
               <div className="result" role="status">
                 {serveResult && serveResult.earned !== undefined
@@ -1547,6 +1778,7 @@ export default function Home() {
               <button className="primary" onClick={draw}>
                 {round ? "DRAW AGAIN" : "DRAW YOUR CARDS"} <span>↗</span>
               </button>
+              <NukeButton boss="Chef Kenji" />
               <p className="tiny">
                 No reshuffling. No jokers. No chef privileges.
               </p>
@@ -1561,6 +1793,11 @@ export default function Home() {
           <span className="sparkle sparkle-2" aria-hidden="true">✦</span>
           <span className="sparkle sparkle-3" aria-hidden="true">✧</span>
         </p>
+      )}
+      {nukeFlash && (
+        <div className="nuke-flash" aria-hidden="true">
+          <span>☢</span>
+        </div>
       )}
       <div className="challenges-cta-row">
         <button className="challenges-cta" type="button" onClick={() => setShowChallenges(true)}>

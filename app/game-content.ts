@@ -46,6 +46,8 @@ export const discoveryDefinitions = [
   ["market-king", "Market King", "Beat Chef Dario at his own game.", "Win the 3-round cookoff against Chef Dario."],
   ["slosh", "Slosh & Sons", "A delivery flyer just slid across the counter.", "Answer Lenny's drink rush delivery shift after becoming Market King."],
   ["beverage-boss", "Beverage Boss", "Survive the worst distributor in Worcester County.", "Serve 8 drink tickets in Lenny's drink rush."],
+  ["nuke", "Nuke the World", "Some bosses are not worth the trouble.", "Spend 300 coins on the nuke button during any boss fight."],
+  ["boss-slayer", "Boss Slayer", "Dario came in person. He left in pieces.", "Win the day-5 cookoff rematch against Chef Dario."],
 ] as const;
 
 export function bowlNickname(selected: string[], allIngredients: string[]) {

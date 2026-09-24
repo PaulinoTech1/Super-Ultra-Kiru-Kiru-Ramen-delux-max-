@@ -47,8 +47,18 @@ export function darioNextTopping(darioToppings, order) {
   return order.toppings.find((id) => !darioToppings.includes(id)) ?? null;
 }
 
-export function darioIsDone(darioToppings, order) {
-  return darioNextTopping(darioToppings, order) === null;
+// Dario's next build step: toppings first, then the ticket's eggs, then done.
+// The player must match the full ticket including eggs, so Dario has to cook
+// the eggs too; otherwise he could win an egg ticket without cracking one.
+export function darioNextStep(darioToppings, darioEggs, order) {
+  const topping = darioNextTopping(darioToppings, order);
+  if (topping) return { kind: "topping", id: topping };
+  if (darioEggs < order.eggs) return { kind: "egg" };
+  return null;
+}
+
+export function darioIsDone(darioToppings, darioEggs, order) {
+  return darioNextStep(darioToppings, darioEggs, order) === null;
 }
 
 // A fire egg knocks Dario's most recently placed topping off his bowl.

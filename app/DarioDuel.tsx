@@ -9,7 +9,7 @@ import {
   ROUND_END_MS,
   darioIntervalMs,
   darioIsDone,
-  darioNextTopping,
+  darioNextStep,
   fireEggKnockoff,
   orderMatches,
   pickOrder,
@@ -63,11 +63,15 @@ export default function DarioDuel({
   onUnlock,
   onThrow,
   onExit,
+  turbo = false,
+  onDuelEnd,
 }: {
   items: Item;
   onUnlock: (id: string) => void;
   onThrow: () => void;
   onExit: () => void;
+  turbo?: boolean;
+  onDuelEnd?: (winner: "player" | "dario") => void;
 }) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [roundIndex, setRoundIndex] = useState(0);
@@ -77,7 +81,10 @@ export default function DarioDuel({
   const [order, setOrder] = useState<DuelOrder>(() => pickOrder([]) as DuelOrder);
   const [playerSelected, setPlayerSelected] = useState<string[]>([]);
   const [playerEggs, setPlayerEggs] = useState(0);
-  const [darioToppings, setDarioToppings] = useState<string[]>([]);
+  const [darioBowl, setDarioBowl] = useState<{ toppings: string[]; eggs: number }>({
+    toppings: [],
+    eggs: 0,
+  });
   const [stunnedUntil, setStunnedUntil] = useState(0);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [taunt, setTaunt] = useState("So. The egg-thrower wants a REAL challenge.");
@@ -113,13 +120,16 @@ export default function DarioDuel({
     if (phase !== "cook") return;
     const timer = setInterval(() => {
       if (Date.now() < stunnedUntil) return;
-      setDarioToppings((prev) => {
-        const next = darioNextTopping(prev, order);
-        return next ? [...prev, next] : prev;
+      setDarioBowl((prev) => {
+        const step = darioNextStep(prev.toppings, prev.eggs, order);
+        if (!step) return prev;
+        return step.kind === "egg"
+          ? { ...prev, eggs: prev.eggs + 1 }
+          : { ...prev, toppings: [...prev.toppings, step.id] };
       });
-    }, darioIntervalMs(roundIndex));
+    }, Math.max(900, Math.round(darioIntervalMs(roundIndex) / (turbo ? 1.7 : 1))));
     return () => clearInterval(timer);
-  }, [phase, roundIndex, order, stunnedUntil]);
+  }, [phase, roundIndex, order, stunnedUntil, turbo]);
 
   function endRound(winner: "player" | "dario") {
     if (roundOver.current) return;
@@ -138,6 +148,7 @@ export default function DarioDuel({
     window.setTimeout(() => {
       if (pw >= COOKOFF_WINS_NEEDED || dw >= COOKOFF_WINS_NEEDED) {
         if (pw >= COOKOFF_WINS_NEEDED) onUnlock("market-king");
+        onDuelEnd?.(pw >= COOKOFF_WINS_NEEDED ? "player" : "dario");
         setPhase("duelEnd");
       } else {
         const names = [...usedNames, order.name];
@@ -146,7 +157,7 @@ export default function DarioDuel({
         setRoundIndex(roundIndex + 1);
         setPlayerSelected([]);
         setPlayerEggs(0);
-        setDarioToppings([]);
+        setDarioBowl({ toppings: [], eggs: 0 });
         setStunnedUntil(0);
         setCooldownUntil(0);
         setRoundResult(null);
@@ -170,9 +181,9 @@ export default function DarioDuel({
 
   // Dario completes the ticket.
   useEffect(() => {
-    if (phase === "cook" && darioIsDone(darioToppings, order)) endRound("dario");
+    if (phase === "cook" && darioIsDone(darioBowl.toppings, darioBowl.eggs, order)) endRound("dario");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [darioToppings, phase, order]);
+  }, [darioBowl, phase, order]);
 
   function togglePlayer(id: string) {
     if (phase !== "cook") return;
@@ -197,7 +208,7 @@ export default function DarioDuel({
     setEggFlying(false);
     if (phaseRef.current !== "cook") return;
     setStunnedUntil(Date.now() + DARIO_STUN_MS);
-    setDarioToppings((prev) => fireEggKnockoff(prev));
+    setDarioBowl((prev) => ({ ...prev, toppings: fireEggKnockoff(prev.toppings) }));
     setTaunt(pickTaunt(DARIO_STUNNED_TAUNTS));
     setHitFlash(true);
     setArenaShake(true);
@@ -213,7 +224,7 @@ export default function DarioDuel({
     setOrder(pickOrder([]) as DuelOrder);
     setPlayerSelected([]);
     setPlayerEggs(0);
-    setDarioToppings([]);
+    setDarioBowl({ toppings: [], eggs: 0 });
     setStunnedUntil(0);
     setCooldownUntil(0);
     setRoundResult(null);
@@ -316,9 +327,9 @@ export default function DarioDuel({
               </div>
             )}
             <p className="eyebrow orange">DARIO&apos;S COUNTER</p>
-            <div className="dario-progress" aria-label={`Dario has placed ${darioToppings.length} of ${order.toppings.length} toppings`}>
+            <div className="dario-progress" aria-label={`Dario has placed ${darioBowl.toppings.length} of ${order.toppings.length} toppings and ${darioBowl.eggs} of ${order.eggs} eggs`}>
               {order.toppings.map((id) => {
-                const placed = darioToppings.includes(id);
+                const placed = darioBowl.toppings.includes(id);
                 const item = itemById(items, id);
                 return (
                   <span key={id} className={placed ? "placed" : ""} title={item?.[1] ?? id}>
@@ -326,6 +337,11 @@ export default function DarioDuel({
                   </span>
                 );
               })}
+              {order.eggs > 0 && (
+                <span className={darioBowl.eggs >= order.eggs ? "placed" : ""} title="ajitama eggs">
+                  {"🥚".repeat(darioBowl.eggs)}{"○".repeat(Math.max(0, order.eggs - darioBowl.eggs))}
+                </span>
+              )}
             </div>
             {stunned && <p className="stun-flag" role="status">STUNNED!</p>}
             <p className="taunt speech-bubble bubble-dario" aria-live="polite">&ldquo;{taunt}&rdquo;</p>

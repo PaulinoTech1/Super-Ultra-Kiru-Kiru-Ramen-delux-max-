@@ -9,6 +9,53 @@ export const TIP_PER_TOPPING = 10;
 export const DUEL_WIN_BONUS = 30;
 export const GOAT_BONUS = 100;
 
+// The nuke: a rage button for boss fights. Costs real coins, ends the run.
+export const NUKE_COST = 300;
+export function spendCoins(run, amount) {
+  if (run.totalCoins < amount) return { run, ok: false };
+  return {
+    run: {
+      ...run,
+      totalCoins: run.totalCoins - amount,
+      coins: Math.max(0, run.coins - amount),
+    },
+    ok: true,
+  };
+}
+
+// Customer types. Patience is seconds of real time while the bowl is built
+// and dueled; an empty meter means a walkout. Quirks make types matter.
+export const CUSTOMER_TYPES = {
+  regular: { name: "Regular", patience: 60, blurb: "Knows the menu. Knows the wait." },
+  rusher: { name: "Rusher", patience: 35, blurb: "Double-parked outside. The meter is running.", bonus: 25 },
+  critic: { name: "Critic", patience: 90, blurb: "Writes reviews. A loaded bowl (4+ toppings) or half pay.", minToppings: 4 },
+  sleeper: { name: "Sleeper", patience: 50, blurb: "Jet-lagged. Patience drains half as fast.", drain: 0.5 },
+  boss: { name: "Dario", patience: Infinity, blurb: "He came in person this time." },
+};
+export function patienceFor(typeId) {
+  return CUSTOMER_TYPES[typeId]?.patience ?? CUSTOMER_TYPES.regular.patience;
+}
+
+// Five customers a day. Later days get spicier; day 5 ends with the boss.
+const DAY_LINEUPS = {
+  1: ["regular", "regular", "regular", "regular", "regular"],
+  2: ["regular", "regular", "regular", "regular", "rusher"],
+  3: ["regular", "regular", "regular", "rusher", "sleeper"],
+  4: ["regular", "regular", "rusher", "critic", "sleeper"],
+  5: ["regular", "rusher", "critic", "sleeper", "boss"],
+};
+export function customersForDay(day, rand = Math.random) {
+  const key = Math.min(Math.max(day || 1, 1), FINAL_DAY);
+  const lineup = [...(DAY_LINEUPS[key] ?? DAY_LINEUPS[1])];
+  const boss = lineup[lineup.length - 1] === "boss" ? lineup.pop() : null;
+  for (let i = lineup.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [lineup[i], lineup[j]] = [lineup[j], lineup[i]];
+  }
+  if (boss) lineup.push(boss);
+  return lineup;
+}
+
 // Difficulty select (settings UI): how forgiving a day is.
 export const HEARTS_BY_DIFFICULTY = { easy: 4, normal: 3, hard: 2 };
 export function heartsForDifficulty(difficulty) {
@@ -23,6 +70,7 @@ export function initialRun(maxHearts = MAX_HEARTS) {
   return {
     day: 1,
     customer: 1,
+    customers: customersForDay(1),
     hearts: maxHearts,
     coins: 0,       // coins earned today
     totalCoins: 0,  // coins earned across the whole run
@@ -40,6 +88,7 @@ export function startDay(run, maxHearts = MAX_HEARTS) {
   return {
     ...run,
     customer: 1,
+    customers: customersForDay(run.day),
     hearts: maxHearts,
     coins: 0,
     served: 0,
@@ -50,10 +99,14 @@ export function startDay(run, maxHearts = MAX_HEARTS) {
 }
 
 // Coins for one bowl. `selected` is the topping id list ("ajitama" counts once).
-export function bowlPayout(selected, { duelWon = false, goatWon = false } = {}) {
+// `bonus` adds a flat tip (rushers served fast); `halve` is the critic's
+// punishment for a lazy bowl.
+export function bowlPayout(selected, { duelWon = false, goatWon = false, bonus = 0, halve = false } = {}) {
   let pay = BASE_PAY + TIP_PER_TOPPING * selected.length;
   if (duelWon) pay += DUEL_WIN_BONUS;
   if (goatWon) pay += GOAT_BONUS;
+  pay += bonus;
+  if (halve) pay = Math.floor(pay / 2);
   return pay;
 }
 
