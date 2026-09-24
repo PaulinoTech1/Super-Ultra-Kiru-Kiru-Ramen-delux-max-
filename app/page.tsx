@@ -6,6 +6,7 @@ import ChickenBoss from "./ChickenBoss";
 import BowlRoll from "./BowlRoll";
 import DarioDuel from "./DarioDuel";
 import SloshRush from "./SloshRush";
+import Dialog from "./Dialog";
 import { BOWLS, rollBowl, thirdStep } from "./kitchen-rules.mjs";
 import { bowlGreetings, bowlNickname, discoveryDefinitions, ingredientReactions, loadDiscoveries, orderTitle, refusalDialogue, saveDiscoveries, specialSigns } from "./game-content";
 import {
@@ -311,6 +312,32 @@ type RunState = Omit<ReturnType<typeof initialRun>, "result"> & {
   result: null | "day-end" | "gameover" | "victory";
 };
 
+type Settings = { music: number; sfx: number; difficulty: string };
+const DEFAULT_SETTINGS: Settings = { music: 80, sfx: 80, difficulty: "normal" };
+
+// Browser-only: read persisted settings. This must run in an effect after
+// hydration, never during render: reading localStorage in a useState
+// initializer made the first client render differ from the SSR HTML
+// (React hydration error #418) whenever stored values differed from defaults.
+function readStoredSettings(): Settings | null {
+  try {
+    const raw = window.localStorage.getItem("kuru-kuru-settings");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const clampVol = (v: unknown, dflt: number) =>
+      Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Number(v))) : dflt;
+    return {
+      music: clampVol(parsed.music, 80),
+      sfx: clampVol(parsed.sfx, 80),
+      difficulty: ["easy", "normal", "hard"].includes(parsed.difficulty)
+        ? parsed.difficulty
+        : "normal",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function Home() {
   const [stage, S] = useState("roll"),
     [refusals, R] = useState(0),
@@ -328,35 +355,15 @@ export default function Home() {
     [fieryChicken, setFieryChicken] = useState(false),
     [goldenChicken, setGoldenChicken] = useState(false),
     [knockedBottles, setKnockedBottles] = useState<number[]>([]),
-    [settings, setSettings] = useState(() => {
-      const fallback = { music: 80, sfx: 80, difficulty: "normal" };
-      if (typeof window === "undefined") return fallback;
-      try {
-        const raw = window.localStorage.getItem("kuru-kuru-settings");
-        if (!raw) return fallback;
-        const parsed = JSON.parse(raw);
-        const clampVol = (v: unknown, dflt: number) =>
-          Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Number(v))) : dflt;
-        return {
-          music: clampVol(parsed.music, 80),
-          sfx: clampVol(parsed.sfx, 80),
-          difficulty: ["easy", "normal", "hard"].includes(parsed.difficulty) ? parsed.difficulty : "normal",
-        };
-      } catch {
-        return fallback;
-      }
-    }),
+    // Render-safe defaults: the SSR HTML and the first client render must
+    // agree, so browser-only state (settings, records, discoveries) loads in
+    // the hydration effect below, never in these initializers.
+    [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS }),
     [splashFx, setSplashFx] = useState(0),
-    [run, setRun] = useState<RunState>(() => initialRun(heartsForDifficulty(settings.difficulty))),
+    [run, setRun] = useState<RunState>(() => initialRun(heartsForDifficulty("normal"))),
     [serveResult, setServeResult] = useState<{ kind: string; earned?: number } | null>(null),
-    [best, setBest] = useState(() => {
-      if (typeof window === "undefined") return { day: 0, coins: 0, bowls: 0 };
-      return loadBest();
-    }),
-    [discoveries, setDiscoveries] = useState<string[]>(() => {
-      if (typeof window === "undefined") return [];
-      return loadDiscoveries();
-    }),
+    [best, setBest] = useState({ day: 0, coins: 0, bowls: 0 }),
+    [discoveries, setDiscoveries] = useState<string[]>([]),
     [discoveryToast, setDiscoveryToast] = useState<string | null>(null),
     [specialSign] = useState<string>(specialSigns[0]),
     [showChallenges, setShowChallenges] = useState(false),
@@ -366,21 +373,46 @@ export default function Home() {
     [finalAttempt, setFinalAttempt] = useState(0),
     [hintPopupId, setHintPopupId] = useState<string | null>(null),
     [showIntroPopup, setShowIntroPopup] = useState(false);
-  const discoveriesReady = useRef(true);
+  // Render-state hydration gate. Persistence effects below must not write
+  // until this is true; otherwise the mount-pass effect flush could persist
+  // the render-safe defaults over the user's stored values. State (not a
+  // ref) guarantees the saves re-run with loaded values after the flip.
+  const [hydrated, setHydrated] = useState(false);
   const musicRef = useRef<AudioContext | null>(null);
   const musicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bossAudioRef = useRef<HTMLAudioElement | null>(null);
   const brothAudioRef = useRef<HTMLAudioElement | null>(null);
   const dialogAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastDialogueRef = useRef(0);
+  // Post-hydration: pull browser-only state (settings, records, discoveries).
+  // Declared before the persistence effects so stored values are loaded
+  // before anything writes back.
   useEffect(() => {
-    if (discoveriesReady.current) saveDiscoveries(discoveries);
-  }, [discoveries]);
+    const stored = readStoredSettings();
+    if (stored) {
+      // Intentional post-mount hydration from localStorage (fixes React #418):
+      // first render must match SSR, so stored values load here, once, and the
+      // gate flips only after they are queued.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSettings(stored);
+      if (stored.difficulty !== "normal") {
+        setRun(initialRun(heartsForDifficulty(stored.difficulty)));
+      }
+    }
+    setBest(loadBest());
+    setDiscoveries(loadDiscoveries());
+    setHydrated(true);
+  }, []);
   useEffect(() => {
+    if (!hydrated) return;
+    saveDiscoveries(discoveries);
+  }, [discoveries, hydrated]);
+  useEffect(() => {
+    if (!hydrated) return;
     try {
       window.localStorage.setItem("kuru-kuru-settings", JSON.stringify(settings));
     } catch { /* settings are optional */ }
-  }, [settings]);
+  }, [settings, hydrated]);
   const sfxLevel = Math.max(0, Math.min(100, settings.sfx)) / 100;
   const musicLevel = Math.max(0, Math.min(100, settings.music)) / 100;
   const heartsForDay = heartsForDifficulty(settings.difficulty);
@@ -410,7 +442,7 @@ export default function Home() {
       const next = [...current, id];
       const definition = discoveryDefinitions.find(([entryId]) => entryId === id);
       if (definition) setDiscoveryToast(`Discovery unlocked: ${definition[1]}`);
-      if (discoveriesReady.current) saveDiscoveries(next);
+      if (hydrated) saveDiscoveries(next);
       return next;
     });
   }
@@ -444,7 +476,12 @@ export default function Home() {
   }
   function openNextHint() {
     const next = discoveryDefinitions.find(([id]) => !discoveries.includes(id));
-    if (next) setHintPopupId(next[0] as string);
+    if (next) {
+      // Never stack dialogs: the map unmounts (restoring focus to its
+      // opener) before the hint mounts, so only one focus trap is live.
+      setShowChallenges(false);
+      setHintPopupId(next[0] as string);
+    }
   }
   useEffect(() => {
     const eligible = stage === "roll" || stage === "welcome" || stage === "build";
@@ -1832,7 +1869,7 @@ export default function Home() {
         <span className="footer-note">NO DOWNLOADS. JUST NOODLES.</span>
       </footer>
       {help && (
-        <aside className="help">
+        <Dialog label="How to play" onClose={() => H(false)} outerClassName="help" lockScroll={false}>
           <h3>The house rules</h3>
           <p>
             Roll the die for one of six unique bowls, choose ramen, then tap
@@ -1846,11 +1883,10 @@ export default function Home() {
           <button className="text-button" onClick={() => H(false)}>
             Got it. Let&apos;s eat. ×
           </button>
-        </aside>
+        </Dialog>
       )}
       {showSettings && (
-        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Settings">
-          <div className="popup-card settings-popup">
+        <Dialog label="Settings" onClose={() => setShowSettings(false)} outerClassName="popup-overlay" innerClassName="popup-card settings-popup">
             <div className="popup-header">
               <h3>Settings</h3>
               <button type="button" aria-label="Close settings" onClick={() => setShowSettings(false)}>×</button>
@@ -1906,12 +1942,10 @@ export default function Home() {
                 BACK TO RAMEN →
               </button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
       {showIntroPopup && (
-        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Hidden challenges intro">
-          <div className="popup-card intro-popup">
+        <Dialog label="Hidden challenges intro" onClose={dismissIntroPopup} outerClassName="popup-overlay" innerClassName="popup-card intro-popup">
             <h3>Psst. {discoveryDefinitions.length} hidden challenges.</h3>
             <p>This shop hides {discoveryDefinitions.length} secrets. Logo taps, bottle chaos, egg math, chicken encounters. Want the map?</p>
             <div className="popup-actions">
@@ -1922,12 +1956,10 @@ export default function Home() {
                 I like surprises. ×
               </button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
       {showChallenges && (
-        <div className="popup-overlay" role="dialog" aria-modal="true" aria-label={`${discoveryDefinitions.length} challenges`}>
-          <div className="popup-card challenges-modal">
+        <Dialog label={`${discoveryDefinitions.length} challenges`} onClose={() => setShowChallenges(false)} outerClassName="popup-overlay" innerClassName="popup-card challenges-modal">
             <div className="popup-header">
               <h3>{discoveryDefinitions.length} Hidden Challenges</h3>
               <button type="button" aria-label="Close challenges" onClick={() => setShowChallenges(false)}>×</button>
@@ -1956,8 +1988,7 @@ export default function Home() {
                 Give me one hint →
               </button>
             </div>
-          </div>
-        </div>
+        </Dialog>
       )}
       {hintPopupId && (() => {
         const def = discoveryDefinitions.find(([id]) => id === hintPopupId);
@@ -1965,8 +1996,7 @@ export default function Home() {
         const [id, label, hint] = def;
         const unlocked = discoveries.includes(id);
         return (
-          <div className="popup-overlay" role="dialog" aria-modal="true" aria-label="Challenge hint">
-            <div className="popup-card hint-popup">
+          <Dialog label="Challenge hint" onClose={() => setHintPopupId(null)} outerClassName="popup-overlay" innerClassName="popup-card hint-popup">
               <div className="popup-header">
                 <h3>{unlocked ? label : "Need a nudge?"}</h3>
                 <button type="button" aria-label="Close hint" onClick={() => setHintPopupId(null)}>×</button>
@@ -2000,8 +2030,7 @@ export default function Home() {
                   </div>
                 </>
               )}
-            </div>
-          </div>
+          </Dialog>
         );
       })()}
     </main>

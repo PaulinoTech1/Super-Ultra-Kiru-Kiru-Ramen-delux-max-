@@ -19,14 +19,6 @@ type Item = string[][];
 type Phase = "intro" | "roundIntro" | "cook" | "roundEnd" | "duelEnd";
 type DuelOrder = { name: string; toppings: string[]; eggs: number };
 
-const DARIO_TAUNTS = [
-  "My nonna builds faster, and she's a parking ticket!",
-  "WUSS-ter? More like WUSS-terrible! ...wait.",
-  "You call that chashu placement?!",
-  "I'm from Providence and even I know better!",
-  "Dario does it Dario-fast. Watch and weep!",
-  "Your broth has no ambition!",
-];
 const DARIO_STUNNED_TAUNTS = [
   "OW! MY EYEBROWS! That egg was ON FIRE!",
   "You fight dirty! I respect it! OW!",
@@ -95,12 +87,7 @@ export default function DarioDuel({
   const [arenaShake, setArenaShake] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const roundOver = useRef(false);
-  const phaseRef = useRef<Phase>("intro");
   const flightTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
 
   // Clear a mid-flight egg if the duel unmounts.
   useEffect(() => {
@@ -195,25 +182,24 @@ export default function DarioDuel({
   function throwFireEgg() {
     if (phase !== "cook" || Date.now() < cooldownUntil) return;
     onThrow();
-    setCooldownUntil(Date.now() + FIRE_EGG_COOLDOWN_MS);
-    setEggFlying(true);
-    if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
-    flightTimer.current = window.setTimeout(eggImpact, FIRE_EGG_FLIGHT_MS);
-  }
-
-  // The egg lands 650ms after the throw. If the round ended mid-flight,
-  // the egg just fizzles out.
-  function eggImpact() {
-    flightTimer.current = null;
-    setEggFlying(false);
-    if (phaseRef.current !== "cook") return;
-    setStunnedUntil(Date.now() + DARIO_STUN_MS);
+    const thrownAt = Date.now();
+    setCooldownUntil(thrownAt + FIRE_EGG_COOLDOWN_MS);
+    // The stun and the knockoff land the instant the egg leaves your hand.
+    // The 650ms flight is pure theater; delaying the impact made the egg
+    // feel unresponsive and let Dario squeeze in a free build step.
+    setStunnedUntil(thrownAt + DARIO_STUN_MS);
     setDarioBowl((prev) => ({ ...prev, toppings: fireEggKnockoff(prev.toppings) }));
     setTaunt(pickTaunt(DARIO_STUNNED_TAUNTS));
     setHitFlash(true);
     setArenaShake(true);
     window.setTimeout(() => setHitFlash(false), 700);
     window.setTimeout(() => setArenaShake(false), 450);
+    setEggFlying(true);
+    if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
+    flightTimer.current = window.setTimeout(() => {
+      flightTimer.current = null;
+      setEggFlying(false);
+    }, FIRE_EGG_FLIGHT_MS);
   }
 
   function rematch() {
